@@ -4,6 +4,10 @@
  * 监听端口：process.env.PORT || 3000
  * 云环境：process.env.WX_CLOUD_ENV || 默认环境 ID
  *
+ * 容错设计（关键）：
+ *   - 云初始化失败不会让容器崩溃，保证健康检查/端口始终可用
+ *   - 所有数据库操作前校验 db 是否已就绪，未就绪返回明确错误
+ *
  * 安全模型（与 auditStage 云函数一致）：
  *   - 改进程 / 退回 / 删除 / 清空 等写操作需携带审核密钥
  *   - ADMIN_KEY='社畜' 拥有全部权限；AUDIT_KEY='天选打工人' 可改进程、退回
@@ -12,8 +16,14 @@ const express = require('express');
 const cloud = require('wx-server-sdk');
 
 const ENV = process.env.WX_CLOUD_ENV || 'cloud1-d7go7cz1ccef43aa4';
-cloud.init({ env: ENV });
-const db = cloud.database();
+let cloudReady = true;
+try {
+  cloud.init({ env: ENV });
+} catch (e) {
+  cloudReady = false;
+  console.error('[warn] wx-server-sdk init failed, DB calls will fail until env is correctly bound:', (e && e.message) || e);
+}
+const db = cloudReady ? cloud.database() : null;
 
 const ADMIN_KEY = '社畜';
 const AUDIT_KEY = '天选打工人';
@@ -51,11 +61,19 @@ function applyToggle(r, v) {
   else { r.stage = v; r.rejected = false; }
 }
 
+function dbUnavailable(res) {
+  return res.status(503).json({ ok: false, msg: '云数据库未就绪：请确认云托管已绑定云环境，且 WX_CLOUD_ENV 正确' });
+}
+
+/* ---------- 根路径（云托管默认健康检查兜底） ---------- */
+app.get('/', (req, res) => res.json({ ok: true, service: 'reimbursement-server', cloudReady }));
+
 /* ---------- 健康检查（云托管存活探针） ---------- */
-app.get('/health', (req, res) => res.json({ ok: true, env: ENV, time: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, env: ENV, cloudReady, time: Date.now() }));
 
 /* ---------- 查询记录 ---------- */
 app.get('/api/records', async (req, res) => {
+  if (!db) return dbUnavailable(res);
   try {
     const { openid, type } = req.query;
     let q = db.collection('records');
@@ -70,6 +88,7 @@ app.get('/api/records', async (req, res) => {
 
 /* ---------- 新增记录 ---------- */
 app.post('/api/records', async (req, res) => {
+  if (!db) return dbUnavailable(res);
   try {
     const rec = req.body || {};
     const id = rec.id || ('R' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36));
@@ -95,6 +114,7 @@ app.post('/api/records', async (req, res) => {
 
 /* ---------- 审核写操作（服务端密钥校验） ---------- */
 app.post('/api/audit', async (req, res) => {
+  if (!db) return dbUnavailable(res);
   try {
     const { id, action, v, key } = req.body || {};
     const role = roleOf(key);
@@ -144,4 +164,4 @@ app.post('/api/audit', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`[reimbursement-server] listening on ${PORT}, env=${ENV}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`[reimbursement-server] listening on ${PORT}, env=${ENV}, cloudReady=${cloudReady}`));
