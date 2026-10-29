@@ -19,8 +19,12 @@
       <view class="mat-label">{{g.name}}（{{g.list.length}}）</view>
       <view wx:if="{{g.list.length===0}}" class="t3">未上传</view>
       <view class="gal" wx:else>
-        <image wx:for="{{g.list}}" wx:key="index" wx:for-item="f" wx:for-index="i" wx:if="{{f.type==='image'}}" class="gal-img" src="{{f.path}}" mode="aspectFill" bindtap="previewImg" data-key="{{g.key}}" data-i="{{i}}"/>
-        <view wx:for="{{g.list}}" wx:key="index" wx:for-item="f" wx:for-index="i" wx:if="{{f.type==='file'}}" class="gal-doc" bindtap="openFile" data-key="{{g.key}}" data-i="{{i}}">📄 {{f.name}}</view>
+        <block wx:for="{{g.list}}" wx:key="path" wx:for-item="f" wx:for-index="i">
+          <image wx:if="{{f.type==='image'}}" class="gal-img" src="{{f.path}}" mode="aspectFill" bindtap="previewImg" data-key="{{g.key}}" data-i="{{i}}"/>
+        </block>
+        <block wx:for="{{g.list}}" wx:key="path" wx:for-item="f" wx:for-index="i">
+          <view wx:if="{{f.type==='file'}}" class="gal-doc" bindtap="openFile" data-key="{{g.key}}" data-i="{{i}}">📄 {{f.name}}</view>
+        </block>
       </view>
     </block>
   </view>

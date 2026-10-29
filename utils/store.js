@@ -5,6 +5,7 @@
  * 读取走内存缓存（同步），写入乐观更新缓存并异步持久化。
  * ============================================================ */
 const cfg = require('./config.js');
+const api = require('./api.js');
 const fs = wx.getFileSystemManager();
 const UPLOAD_DIR = `${wx.env.USER_DATA_PATH}/uploads`;
 const K_USER = 'cy_user';
@@ -103,7 +104,9 @@ function _saveOne(rec) {
   const i = _records.findIndex(r => r.id === rec.id);
   if (i >= 0) _records[i] = rec; else _records.push(rec);
   if (CLOUD_ENABLED && db()) {
-    return coll().doc(rec.id).set({ data: rec }).then(() => rec).catch(e => { console.error('cloud save fail', e); return rec; });
+    return coll().doc(rec.id).set({ data: rec })
+      .then(() => rec)
+      .catch(e => { console.error('cloud save fail, fallback to local', e); _persistLocal(); return rec; });
   }
   _persistLocal();
   return Promise.resolve(rec);
@@ -140,8 +143,7 @@ function mergeRecord(rec) {
   if (i >= 0) _records[i] = rec; else _records.push(rec);
 }
 function _callAudit(action, id, v) {
-  return wx.cloud.callFunction({ name: 'auditStage', data: { action, id, v, key: getAuditKey() } })
-    .then(r => (r && r.result) || { ok: false });
+  return api.callAudit(action, id, v, getAuditKey());
 }
 function localToggle(rec, v) {
   rec.stageLog = rec.stageLog || {};
@@ -222,8 +224,9 @@ function uploadFile(tempPath, name) {
 /* ---------- 导出 / 导入 / 清空 ---------- */
 function exportJSON() { return JSON.stringify(getRecords()); }
 function importJSON(str) {
-  const arr = JSON.parse(str);
-  if (!Array.isArray(arr)) throw new Error('格式错误');
+  let arr;
+  try { arr = JSON.parse(str); } catch (e) { return Promise.reject(new Error('格式错误')); }
+  if (!Array.isArray(arr)) return Promise.reject(new Error('格式错误'));
   _records = arr;
   if (CLOUD_ENABLED && db()) {
     return Promise.all(arr.map(r => coll().doc(r.id).set({ data: r }).catch(() => {})));

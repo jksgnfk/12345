@@ -6,5 +6,11 @@
  * ============================================================ */
 module.exports = {
   // 例：'cloud1-xxxxxx'
-  ENV_ID: 'cloud1-d7go7cz1ccef43aa4'
+  ENV_ID: 'cloud1-d7go7cz1ccef43aa4',
+
+  // 微信云托管后端（可选）。在云托管部署成功后，把 SERVICE 填为你的服务名，
+  // 审核写操作（改进程/退回/删除/清空）将优先走云托管后端 /api/audit，
+  // 失败时自动回退到 auditStage 云函数。留空则始终走云函数。
+  CLOUD_RUN_SERVICE: '',
+  CLOUD_RUN_ENV: 'cloud1-d7go7cz1ccef43aa4'
 };

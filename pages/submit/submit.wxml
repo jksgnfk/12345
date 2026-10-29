@@ -39,7 +39,7 @@
         <view class="mat-hint mono">{{m.multiple?'多张':'单份'}}</view>
       </view>
       <view class="uploader">
-        <view class="file-cell" wx:for="{{m.list}}" wx:key="index" wx:for-item="f" wx:for-index="i">
+        <view class="file-cell" wx:for="{{m.list}}" wx:key="path" wx:for-item="f" wx:for-index="i">
           <image wx:if="{{f.type==='image'}}" class="thumb" src="{{f.path}}" mode="aspectFill" bindtap="previewImg" data-key="{{m.key}}" data-i="{{i}}"/>
           <view wx:else class="file-card" bindtap="openFile" data-key="{{m.key}}" data-i="{{i}}">
             <text class="file-ext">{{f.ext}}</text>

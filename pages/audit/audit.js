@@ -60,9 +60,13 @@ Page({
       title: '导入恢复', editable: true, placeholderText: '粘贴此前导出的JSON',
       success: (res) => {
         if (res.confirm) {
-          store.importJSON(res.content || '').then(() => {
-            wx.showToast({ title: '导入成功', icon: 'success' }); this.load();
-          }).catch(() => { wx.showToast({ title: '格式错误', icon: 'none' }); });
+          try {
+            store.importJSON(res.content || '').then(() => {
+              wx.showToast({ title: '导入成功', icon: 'success' }); this.load();
+            }).catch(() => { wx.showToast({ title: '格式错误', icon: 'none' }); });
+          } catch (e) {
+            wx.showToast({ title: '格式错误', icon: 'none' });
+          }
         }
       }
     });
