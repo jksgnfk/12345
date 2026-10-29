@@ -1,0 +1,20 @@
+<view class="wrap">
+  <view class="card">
+    <view class="card-title"><view class="ttbar"></view>我的报销进度<span class="en">TRACKING</span></view>
+    <view wx:if="{{list.length===0}}" class="t3">尚未提交任何报销，请到「提交端」填报</view>
+    <view class="rec-item" wx:for="{{list}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
+      <view class="rec-top">
+        <text class="rec-reason">{{item.reason}}</text>
+        <text class="rec-stage {{item.badge}}">{{item.stage}}</text>
+      </view>
+      <view class="mini-bar">
+        <view class="seg {{item.seg0}}"></view>
+        <view class="seg {{item.seg1}}"></view>
+        <view class="seg {{item.seg2}}"></view>
+        <view class="seg {{item.seg3}}"></view>
+      </view>
+      <view class="rec-meta mono">{{item.type}} · {{item.total}} · 更新 {{item.time}}</view>
+    </view>
+  </view>
+  <view class="t3" style="text-align:center;">进度查询免密钥，仅显示您本人提交的单据</view>
+</view>

@@ -1,0 +1,55 @@
+<view class="wrap">
+  <!-- 密钥验证 -->
+  <view wx:if="{{!authed}}" class="card key-card">
+    <view class="card-title"><view class="ttbar"></view>审核端密钥验证<span class="en">AUTH</span></view>
+    <view class="t2" style="margin-bottom:12px;">请输入审核密钥进入进程管理。标准审核 / 最高管理员密钥权限不同。</view>
+    <view class="field" style="border:none;"><label>密钥</label><view class="val"><input class="pf" value="{{keyInput}}" bindinput="onKey" placeholder="请输入审核密钥" confirm-type="done" bindconfirm="confirmKey"/></view></view>
+    <view wx:if="{{keyErr}}" class="err">密钥错误，请重试</view>
+    <button class="btn btn-primary mt8" bindtap="confirmKey">验证并进入</button>
+  </view>
+
+  <!-- 已验证 -->
+  <block wx:if="{{authed}}">
+    <view class="card">
+      <view class="card-title"><view class="ttbar"></view>审核统计<span class="en">STATS</span></view>
+      <view class="stats">
+        <view class="stat"><text class="sv">{{stats.audit}}</text><text class="sl">审核中</text></view>
+        <view class="stat"><text class="sv" style="color:var(--blue)">{{stats.signed}}</text><text class="sl">已签字</text></view>
+        <view class="stat"><text class="sv" style="color:var(--amber)">{{stats.caiwu}}</text><text class="sl">计财处</text></view>
+        <view class="stat"><text class="sv" style="color:var(--cyan-d)">{{stats.done}}</text><text class="sl">已完成</text></view>
+      </view>
+      <view class="amount mono">通过金额合计 {{amount}}</view>
+    </view>
+
+    <view class="card mt12">
+      <view class="card-title"><view class="ttbar"></view>报销单据<span class="en">RECORDS</span>
+        <view class="filters">
+          <text class="flt {{filter==='all'?'on':''}}" bindtap="setFilter" data-f="all">全部</text>
+          <text class="flt {{filter==='ing'?'on':''}}" bindtap="setFilter" data-f="ing">进行中</text>
+          <text class="flt {{filter==='done'?'on':''}}" bindtap="setFilter" data-f="done">已完成</text>
+          <text class="flt {{filter==='rej'?'on':''}}" bindtap="setFilter" data-f="rej">已退回</text>
+        </view>
+      </view>
+      <view wx:if="{{list.length===0}}" class="t3">暂无单据</view>
+      <view class="rec-item" wx:for="{{list}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
+        <view class="rec-top"><text class="rec-reason">{{item.reason}}</text><text class="rec-stage {{item.badge}}">{{item.stage}}</text></view>
+        <view class="mini-bar">
+          <view class="seg {{item.seg0}}"></view><view class="seg {{item.seg1}}"></view><view class="seg {{item.seg2}}"></view><view class="seg {{item.seg3}}"></view>
+        </view>
+        <view class="rec-meta mono">{{item.name}} · {{item.type}} · {{item.total}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{role==='admin'}}" class="card mt12">
+      <view class="card-title"><view class="ttbar"></view>数据管理<span class="en">DATA</span></view>
+      <view class="btn-row">
+        <button class="btn btn-line" bindtap="exportData">导出备份</button>
+        <button class="btn btn-line" bindtap="importData">导入恢复</button>
+      </view>
+      <button class="btn btn-danger mt8" bindtap="clearAll">清空全部记录</button>
+    </view>
+    <view wx:else class="card mt12 t2">当前权限：标准审核（天选打工人）。数据管理需最高管理员密钥（社畜）。</view>
+
+    <button class="btn btn-ghost mt12" bindtap="logoutRole">退出审核登录</button>
+  </block>
+</view>

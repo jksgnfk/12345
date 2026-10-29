@@ -1,0 +1,21 @@
+/* 最终权限 · 历史档案检索 */
+.searchbar {
+  display: flex; align-items: center;
+  background: var(--panel2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 12px; margin-bottom: 10px;
+}
+.searchbar .s-ic { font-size: 15px; margin-right: 8px; opacity: .7; }
+.searchbar .s-in { flex: 1; font-size: 14px; background: transparent; }
+.searchbar .s-cl {
+  font-size: 18px; color: var(--text3); margin-left: 6px; padding: 0 4px;
+  line-height: 1;
+}
+
+.rec-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+.key-card .pf { letter-spacing: 2px; }
+.btn-ghost {
+  background: transparent; color: var(--text2);
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.btn-ghost::after { border: none; }

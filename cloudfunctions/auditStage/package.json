@@ -1,0 +1,9 @@
+{
+  "name": "auditStage",
+  "version": "1.0.0",
+  "description": "宸阳书院报销系统 - 审核写/删除（服务端密钥校验）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

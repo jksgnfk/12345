@@ -1,0 +1,20 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home",
+    "pages/submit/submit",
+    "pages/track/track",
+    "pages/audit/audit",
+    "pages/history/history",
+    "pages/detail/detail"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTitleText": "宸阳书院报销系统",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f2faf6",
+    "enablePullDownRefresh": false
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

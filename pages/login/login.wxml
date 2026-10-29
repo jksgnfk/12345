@@ -1,0 +1,31 @@
+<view class="login-wrap">
+  <view class="logo-box">
+    <view class="rhine">
+      <view class="hex"></view>
+      <view class="hex2"></view>
+      <view class="vline"></view>
+      <view class="core"></view>
+    </view>
+    <view class="logo-title">宸阳书院</view>
+    <view class="logo-en mono">CHENYANG ACADEMY</view>
+  </view>
+
+  <view class="card login-card">
+    <view class="card-title"><view class="ttbar"></view>登录 / 身份登记<span class="en">LOGIN</span></view>
+    <view class="field">
+      <label class="req">用户名</label>
+      <view class="val"><input class="pf" placeholder="必填，用于追踪你的报销" value="{{user.username}}" bindinput="onUser"/></view>
+    </view>
+    <view class="field">
+      <label>书院</label>
+      <view class="val"><input class="pf" placeholder="如：宸阳书院" value="{{user.academy}}" bindinput="onAcademy"/></view>
+    </view>
+    <view class="field">
+      <label>部门</label>
+      <view class="val"><input class="pf" placeholder="如：学生会 / 项目部" value="{{user.dept}}" bindinput="onDept"/></view>
+    </view>
+    <button class="btn btn-primary mt16" bindtap="login">进入系统</button>
+  </view>
+
+  <view class="t3" style="text-align:center;">报销资料提交系统 · 提交端 / 审核端 / 进度查询</view>
+</view>

@@ -1,0 +1,13 @@
+# 依赖
+node_modules/
+
+# 微信开发者工具私有配置
+project.private.config.json
+
+# 操作系统 / 编辑器
+.DS_Store
+Thumbs.db
+*.log
+
+# 本地临时文件
+.temp/

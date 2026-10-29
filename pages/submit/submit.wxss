@@ -1,0 +1,30 @@
+.picker-val { padding: 9px 10px; color: var(--text); }
+
+.mat-block { padding: 11px 0; border-bottom: 1px solid #eef6f1; }
+.mat-block:last-child { border-bottom: none; }
+.mat-block.req { box-shadow: inset 3px 0 0 var(--red); padding-left: 8px; margin-left: -8px; border-radius: 4px; }
+.mat-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; }
+.mat-name { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.mat-name .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); }
+.mat-hint { font-size: 10px; color: var(--text3); }
+
+.uploader { display: flex; flex-wrap: wrap; gap: 8px; }
+.file-cell { position: relative; width: 64px; height: 64px; }
+.thumb { width: 64px; height: 64px; border-radius: 8px; background: #eee; }
+.file-card { width: 64px; height: 64px; border-radius: 8px; background: var(--cyan-l); border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; }
+.file-ext { font-weight: 700; color: var(--cyan-d); font-size: 12px; }
+.file-name { font-size: 9px; color: var(--text2); max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rm { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: var(--red); color: #fff; font-size: 12px; text-align: center; line-height: 18px; z-index: 2; }
+.add-btn { width: 64px; height: 64px; border-radius: 8px; border: 1px dashed var(--cyan); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--cyan-d); }
+.add-btn .plus { font-size: 22px; line-height: 1; }
+.add-btn .add-t { font-size: 10px; }
+
+.summary { background: var(--cyan-l); }
+.sum-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+.sum-money { font-size: 18px; font-weight: 800; color: var(--cyan-d); }
+
+.rec-item { padding: 11px 0; border-bottom: 1px solid #eef6f1; }
+.rec-item:last-child { border-bottom: none; }
+.rec-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rec-reason { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-meta { font-size: 11px; color: var(--text3); margin-top: 4px; }

@@ -1,0 +1,19 @@
+{
+  "description": "宸阳书院报销系统（微信小程序版）",
+  "packOptions": { "ignore": [], "include": [] },
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": false,
+    "newFeature": true,
+    "bigPackageSizeSupport": true
+  },
+  "compileType": "miniprogram",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "libVersion": "latest",
+  "appid": "wx4bea60f397907115",
+  "projectname": "报销系统小程序",
+  "miniprogramRoot": "./",
+  "condition": {}
+}

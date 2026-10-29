@@ -1,0 +1,48 @@
+<view class="wrap">
+  <!-- 密钥验证 -->
+  <view wx:if="{{!authed}}" class="card key-card">
+    <view class="card-title"><view class="ttbar"></view>最终权限验证<span class="en">ROOT</span></view>
+    <view class="t2" style="margin-bottom:12px;">本入口用于检索全部历史报销记录，仅最高管理员（社畜）可进入。</view>
+    <view class="field" style="border:none;"><label>密钥</label><view class="val"><input class="pf" value="{{keyInput}}" bindinput="onKey" placeholder="请输入最高权限密钥" confirm-type="done" bindconfirm="confirmKey"/></view></view>
+    <view wx:if="{{keyErr}}" class="err">密钥错误，仅最高管理员（社畜）可进入</view>
+    <button class="btn btn-primary mt8" bindtap="confirmKey">验证并进入</button>
+  </view>
+
+  <!-- 已验证 -->
+  <block wx:if="{{authed}}">
+    <view class="card">
+      <view class="card-title"><view class="ttbar"></view>历史档案统计<span class="en">ARCHIVE</span></view>
+      <view class="stats">
+        <view class="stat"><text class="sv">{{totalAll}}</text><text class="sl">归档总数</text></view>
+        <view class="stat"><text class="sv" style="color:var(--cyan-d)">{{doneAll}}</text><text class="sl">已完成</text></view>
+        <view class="stat"><text class="sv" style="color:var(--amber)">{{amount}}</text><text class="sl">报销总额</text></view>
+      </view>
+    </view>
+
+    <view class="card mt12">
+      <view class="card-title"><view class="ttbar"></view>记录检索<span class="en">SEARCH</span></view>
+      <view class="searchbar">
+        <text class="s-ic">🔍</text>
+        <input class="s-in" value="{{kw}}" bindinput="onKw" placeholder="搜索姓名 / 事由 / 类型 / 书院 / 部门" confirm-type="search"/>
+        <text wx:if="{{kw}}" class="s-cl" bindtap="clearKw">×</text>
+      </view>
+      <view class="filters">
+        <text class="flt {{filter==='all'?'on':''}}" bindtap="setFilter" data-f="all">全部</text>
+        <text class="flt {{filter==='ing'?'on':''}}" bindtap="setFilter" data-f="ing">进行中</text>
+        <text class="flt {{filter==='done'?'on':''}}" bindtap="setFilter" data-f="done">已完成</text>
+        <text class="flt {{filter==='rej'?'on':''}}" bindtap="setFilter" data-f="rej">已退回</text>
+      </view>
+      <view wx:if="{{list.length===0}}" class="t3">无匹配记录</view>
+      <view class="rec-item" wx:for="{{list}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
+        <view class="rec-top"><text class="rec-reason">{{item.reason}}</text><text class="rec-stage {{item.badge}}">{{item.stage}}</text></view>
+        <view class="mini-bar">
+          <view class="seg {{item.seg0}}"></view><view class="seg {{item.seg1}}"></view><view class="seg {{item.seg2}}"></view><view class="seg {{item.seg3}}"></view>
+        </view>
+        <view class="rec-meta mono">{{item.name}} · {{item.type}} · {{item.total}}</view>
+        <view class="rec-sub mono">{{item.date}}{{item.academy ? ' · ' + item.academy : ''}}{{item.dept ? ' · ' + item.dept : ''}}</view>
+      </view>
+    </view>
+
+    <button class="btn btn-ghost mt12" bindtap="logoutAuth">退出最终权限</button>
+  </block>
+</view>

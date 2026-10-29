@@ -1,0 +1,54 @@
+<view wx:if="{{rec}}" class="wrap">
+  <!-- 基本信息 -->
+  <view class="card">
+    <view class="card-title"><view class="ttbar"></view>报销信息<span class="en">INFO</span>
+      <text class="rec-stage {{badge}}" style="margin-left:auto;">{{stage}}</text>
+    </view>
+    <view class="info-row"><text class="k">报销人</text><text class="v">{{rec.name}}{{rec.academy?'（'+rec.academy:''}}{{rec.dept?' / '+rec.dept:''}}{{rec.academy||rec.dept?'）':''}}</text></view>
+    <view class="info-row"><text class="k">类型</text><text class="v">{{rec.type}}{{rec.clothing?' · 含服装采购':''}}</text></view>
+    <view class="info-row"><text class="k">付款方式</text><text class="v">{{rec.payMethod}}</text></view>
+    <view class="info-row"><text class="k">事由</text><text class="v">{{rec.reason}}</text></view>
+    <view class="info-row"><text class="k">总额</text><text class="v mono">{{total}}</text></view>
+    <view class="info-row" wx:if="{{rec.note}}"><text class="k">备注</text><text class="v">{{rec.note}}</text></view>
+  </view>
+
+  <!-- 材料 -->
+  <view class="card">
+    <view class="card-title"><view class="ttbar"></view>报销材料<span class="en">MATERIALS</span></view>
+    <block wx:for="{{matList}}" wx:key="key" wx:for-item="g">
+      <view class="mat-label">{{g.name}}（{{g.list.length}}）</view>
+      <view wx:if="{{g.list.length===0}}" class="t3">未上传</view>
+      <view class="gal" wx:else>
+        <image wx:for="{{g.list}}" wx:key="index" wx:for-item="f" wx:for-index="i" wx:if="{{f.type==='image'}}" class="gal-img" src="{{f.path}}" mode="aspectFill" bindtap="previewImg" data-key="{{g.key}}" data-i="{{i}}"/>
+        <view wx:for="{{g.list}}" wx:key="index" wx:for-item="f" wx:for-index="i" wx:if="{{f.type==='file'}}" class="gal-doc" bindtap="openFile" data-key="{{g.key}}" data-i="{{i}}">📄 {{f.name}}</view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 进程 -->
+  <view class="card">
+    <view class="card-title"><view class="ttbar"></view>处理进程<span class="en">PIPELINE</span></view>
+    <view class="pipe">
+      <view class="pnode {{n.done?'done':''}} {{n.current?'current':''}} {{n.rej?'rej':''}}" wx:for="{{pipe}}" wx:key="k" wx:for-item="n" bindtap="tapNode" data-k="{{n.k}}">
+        <view class="pdot"></view>
+        <view class="pname">{{n.name}}</view>
+        <view class="ptime mono" wx:if="{{n.time}}">{{n.time}}</view>
+      </view>
+      <view class="pline"></view>
+    </view>
+    <view wx:if="{{rec.rejected}}" class="rej-note">该单据已退回修改，需重新提交。</view>
+    <view wx:if="{{mode==='audit'}}" class="t2 mt8">点击上方节点即可勾选 / 撤销进度，系统自动记录达成时间。</view>
+  </view>
+
+  <!-- 操作 -->
+  <block wx:if="{{mode==='audit'}}">
+    <view class="btn-row">
+      <button class="btn btn-danger" bindtap="reject">退回修改</button>
+      <button class="btn btn-line" bindtap="goBack">返回列表</button>
+    </view>
+  </block>
+  <block wx:else>
+    <button class="btn btn-ghost" bindtap="goBack">返回</button>
+  </block>
+</view>
+<view wx:else class="wrap"><view class="t3" style="text-align:center;margin-top:40px;">记录不存在或已删除</view></view>

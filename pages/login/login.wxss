@@ -1,0 +1,13 @@
+.login-wrap { padding: 26px 18px calc(40px + env(safe-area-inset-bottom)); }
+
+.logo-box { text-align: center; margin-bottom: 20px; }
+.rhine { width: 84px; height: 84px; position: relative; margin: 0 auto 12px; }
+.rhine .hex { position: absolute; inset: 0; border: 2px solid var(--cyan); transform: rotate(45deg); border-radius: 12px; background: var(--cyan-l); box-shadow: 0 0 22px rgba(31,170,107,.3); }
+.rhine .hex2 { position: absolute; inset: 14px; border: 1px solid rgba(31,170,107,.5); transform: rotate(45deg); border-radius: 6px; }
+.rhine .vline { position: absolute; left: 50%; top: 10px; bottom: 10px; width: 1px; background: rgba(31,170,107,.35); transform: translateX(-50%); }
+.rhine .core { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
+.logo-title { font-size: 22px; font-weight: 800; letter-spacing: 3px; color: var(--text); }
+.logo-en { font-size: 11px; color: var(--text3); letter-spacing: 2px; margin-top: 2px; }
+
+.login-card { margin-top: 4px; }
+.login-card .field:last-child { border-bottom: none; }

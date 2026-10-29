@@ -1,0 +1,55 @@
+<view class="wrap">
+  <view class="home-head">
+    <view class="rhine-mini">
+      <view class="hex"></view><view class="hex2"></view><view class="core"></view>
+    </view>
+    <view>
+      <view class="hh-title">宸阳书院</view>
+      <view class="hh-en mono">CHENYANG ACADEMY · 报销资料平台</view>
+    </view>
+  </view>
+
+  <view class="user-line t2">
+    当前用户：<text class="u-name">{{user.username}}</text>
+    <text class="mono" wx:if="{{user.academy}}"> · {{user.academy}}</text>
+    <text wx:if="{{user.dept}}"> · {{user.dept}}</text>
+    <text class="logout" bindtap="logout">退出</text>
+  </view>
+
+  <view class="grid">
+    <view class="ent s" style="grid-column:1 / -1;" bindtap="goSubmit">
+      <view class="ent-ic">📤</view><view class="ent-t">提交端</view>
+      <view class="ent-d mono">SUBMIT</view>
+    </view>
+  </view>
+
+  <view class="ent-final" bindtap="goHistory">
+    <view class="ef-lock">🔐</view>
+    <view class="ef-main">
+      <view class="ef-t">最终权限</view>
+      <view class="ef-d mono">ROOT · 历史报销记录检索</view>
+    </view>
+    <view class="ef-go">›</view>
+  </view>
+
+  <view class="grid mt12">
+    <view class="ent t" bindtap="goTrack">
+      <view class="ent-ic">📊</view><view class="ent-t">进度查询</view>
+      <view class="ent-d mono">TRACK</view>
+    </view>
+    <view class="ent a" bindtap="goAudit">
+      <view class="ent-ic">🛡️</view><view class="ent-t">审核端</view>
+      <view class="ent-d mono">AUDIT</view>
+    </view>
+  </view>
+
+  <view class="card mt16">
+    <view class="card-title"><view class="ttbar"></view>使用说明<span class="en">GUIDE</span></view>
+    <view class="guide t2">
+      <view>· 提交端：按报销类型上传材料，支持图片与文件（PDF / Word / Excel / PPT）。</view>
+      <view>· 进度查询：免密钥，查看本人提交单据的处理进度。</view>
+      <view>· 最终权限：最高管理员密钥进入，检索全部历史报销记录（含搜索）。</view>
+      <view>· 审核端：输入密钥进入，勾选处理进程（审核中 → 老师已签字 → 计财处 → 已完成）。</view>
+    </view>
+  </view>
+</view>
