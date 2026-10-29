@@ -1,0 +1,13 @@
+{
+  "name": "reimbursement-server",
+  "version": "1.0.0",
+  "description": "宸阳书院报销系统 - 微信云托管后端容器（与小程序共用 records 集合）",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "wx-server-sdk": "~2.6.3"
+  }
+}
