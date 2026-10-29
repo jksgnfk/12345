@@ -87,7 +87,22 @@ let _records = null; // null=尚未加载；[]=已加载为空
 function _loadSource() {
   if (CLOUD_ENABLED && db()) {
     return coll().orderBy('createdAt', 'desc').limit(1000).get()
-      .then(r => (r.data || []))
+      .then(r => {
+        const cloud = (r.data || []);
+        const local = wx.getStorageSync(K_RECORDS) || [];
+        // 云端与本地合并：以云端为准，但保留「本地有、云端没有」的记录。
+        // 这样当云端写入曾失败时，本地提交副本不会在刷新时被空结果覆盖而丢失。
+        const byId = {};
+        cloud.forEach(x => { byId[x.id] = x; });
+        local.forEach(x => {
+          if (!byId[x.id]) {
+            byId[x.id] = x;
+            // 尝试把本地独有的记录补写回云端，逐步自愈（失败静默忽略）
+            coll().doc(x.id).set({ data: x }).catch(() => {});
+          }
+        });
+        return Object.keys(byId).map(k => byId[k]);
+      })
       .catch(() => wx.getStorageSync(K_RECORDS) || []);
   }
   return Promise.resolve(wx.getStorageSync(K_RECORDS) || []);
@@ -105,7 +120,7 @@ function _saveOne(rec) {
   if (i >= 0) _records[i] = rec; else _records.push(rec);
   if (CLOUD_ENABLED && db()) {
     return coll().doc(rec.id).set({ data: rec })
-      .then(() => rec)
+      .then(() => { _persistLocal(); return rec; })
       .catch(e => { console.error('cloud save fail, fallback to local', e); _persistLocal(); return rec; });
   }
   _persistLocal();
@@ -212,7 +227,14 @@ function uploadFile(tempPath, name) {
     const cloudPath = `uploads/${Date.now()}_${Math.floor(Math.random() * 1e6)}.${ext}`;
     return wx.cloud.uploadFile({ cloudPath, filePath: tempPath })
       .then(r => ({ ok: true, fileID: r.fileID, path: r.fileID }))
-      .catch(e => { console.error('upload fail', e); return { ok: false, path: tempPath }; });
+      .catch(e => {
+        // 云上传失败：把临时文件落一份持久本地副本，避免只剩临时路径导致文件消失
+        console.error('cloud upload fail, fallback to local', e);
+        ensureDir();
+        const localDest = `${UPLOAD_DIR}/${Date.now()}_${Math.floor(Math.random() * 1e6)}.${ext}`;
+        try { fs.saveFileSync(tempPath, localDest); return { ok: false, fileID: null, path: localDest }; }
+        catch (e2) { console.error('local save fail', e2); return { ok: false, fileID: null, path: tempPath }; }
+      });
   }
   ensureDir();
   const ext = (name || tempPath || 'file').split('.').pop() || 'file';
