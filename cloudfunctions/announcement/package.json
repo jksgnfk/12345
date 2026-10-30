@@ -1,0 +1,9 @@
+{
+  "name": "announcement",
+  "version": "1.0.0",
+  "description": "宸阳书院报销系统 - 公告栏发布/修改/删除（服务端最高管理密钥校验）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -302,6 +302,10 @@ function verifyFinalKey(key) {
 function getAuditKey() { return wx.getStorageSync(K_AUDIT_KEY) || ''; }
 function setAuditKey(k) { wx.setStorageSync(K_AUDIT_KEY, k || ''); }
 function clearAuditKey() { wx.removeStorageSync(K_AUDIT_KEY); }
+/* 最高管理：最终权限(ROOT) 或 审核端管理员 任一持有管理员密钥即为最高管理 */
+function isAdmin() {
+  return getFinalAuth() === 'admin' || getAuditRole() === 'admin';
+}
 
 module.exports = {
   CLOUD_ENABLED,
@@ -315,5 +319,5 @@ module.exports = {
   getUser, setUser, logout,
   getAuditRole, setAuditRole, clearAuditRole, verifyKey, ADMIN_KEY, AUDIT_KEY,
   getFinalAuth, setFinalAuth, clearFinalAuth, verifyFinalKey,
-  getAuditKey, setAuditKey, clearAuditKey
+  getAuditKey, setAuditKey, clearAuditKey, isAdmin
 };

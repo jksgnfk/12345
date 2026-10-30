@@ -1,0 +1,73 @@
+<view class="wrap">
+  <!-- 顶部状态条 -->
+  <view class="ab-head">
+    <view class="ab-title">📢 公告栏</view>
+    <view wx:if="{{unread > 0}}" class="ab-unread" bindtap="markAllRead">
+      <text class="dot"></text>{{unread}} 条未读 · 全部已读
+    </view>
+    <view wx:else class="ab-read">已全部阅读</view>
+  </view>
+
+  <!-- 管理工具条（仅最高管理可见） -->
+  <view wx:if="{{authed}}" class="ab-adminbar">
+    <view class="ab-add" bindtap="openAdd">＋ 发布新公告</view>
+    <view class="ab-tip">您拥有发布 / 修改 / 删除权限</view>
+  </view>
+  <view wx:else class="ab-readonly">🔒 当前为只读模式，仅最高管理可发布、修改或删除公告</view>
+
+  <!-- 列表 -->
+  <view wx:if="{{loading}}" class="ab-loading">加载中…</view>
+
+  <block wx:elif="{{list.length === 0}}">
+    <view class="ab-empty">暂无公告</view>
+  </block>
+
+  <view wx:else class="ab-list">
+    <view wx:for="{{list}}" wx:key="_id" class="acard">
+      <view class="ac-top">
+        <view class="ac-title">
+          <text wx:if="{{item.pinned}}" class="pin">置顶</text>
+          <text>{{item.title}}</text>
+        </view>
+        <view wx:if="{{item.unread}}" class="ac-dot"></view>
+      </view>
+      <view wx:if="{{item.content}}" class="ac-content">{{item.content}}</view>
+      <view class="ac-foot">
+        <text class="ac-time">{{item.timeText}}</text>
+        <view wx:if="{{authed}}" class="ac-ops">
+          <text class="op" data-id="{{item._id}}" bindtap="openEdit">修改</text>
+          <text class="op op-del" data-id="{{item._id}}" bindtap="removeAnnounce">删除</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 发布 / 编辑面板 -->
+  <view wx:if="{{showEditor}}" class="mask" bindtap="closeEditor">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-title">{{editingId ? '修改公告' : '发布新公告'}}</view>
+
+      <view class="fld">
+        <view class="fld-lab">标题</view>
+        <input class="fld-in" value="{{formTitle}}" maxlength="40" placeholder="请输入公告标题"
+               bindinput="onTitle" />
+      </view>
+
+      <view class="fld">
+        <view class="fld-lab">内容</view>
+        <textarea class="fld-ta" value="{{formContent}}" maxlength="1000" placeholder="请输入公告内容（选填）"
+                  bindinput="onContent" />
+      </view>
+
+      <view class="fld row">
+        <view class="fld-lab">置顶显示</view>
+        <switch checked="{{formPinned}}" color="#1faa6b" bindchange="onPinned" />
+      </view>
+
+      <view class="sheet-ops">
+        <view class="btn btn-cancel" bindtap="closeEditor">取消</view>
+        <view class="btn btn-save" bindtap="save">保存</view>
+      </view>
+    </view>
+  </view>
+</view>

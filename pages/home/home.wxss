@@ -42,3 +42,14 @@
 .ef-go { font-size: 22px; color: var(--amber); flex: none; }
 
 .guide view { line-height: 1.95; }
+
+/* 公告栏入口红点 / 未读数徽标 */
+.ent-badge {
+  display: inline-block; min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px;
+  margin-left: 6px; font-size: 10px; color: #fff; background: var(--red);
+  border-radius: 999px; vertical-align: middle; text-align: center; font-weight: 700;
+}
+.ent-dot {
+  position: absolute; right: 12px; top: 12px; width: 10px; height: 10px;
+  border-radius: 50%; background: var(--red); box-shadow: 0 0 7px var(--red);
+}
