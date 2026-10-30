@@ -46,7 +46,6 @@ Page({
     const st = this.st;
     const today = S.todayStr();
     S.materializeWeekly(st, st.selectedDate);
-    const d = this.data;
     const viewOf = t => ({
       id: t.id, text: t.text, priority: t.priority, category: t.category,
       due: t.due, dueLabel: S.dueLabel(t, today), overdue: S.isOverdue(t, today),

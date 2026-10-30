@@ -5,7 +5,6 @@
  * 读取走内存缓存（同步），写入乐观更新缓存并异步持久化。
  * ============================================================ */
 const cfg = require('./config.js');
-const api = require('./api.js');
 const fs = wx.getFileSystemManager();
 const UPLOAD_DIR = `${wx.env.USER_DATA_PATH}/uploads`;
 const K_USER = 'cy_user';
@@ -158,7 +157,8 @@ function mergeRecord(rec) {
   if (i >= 0) _records[i] = rec; else _records.push(rec);
 }
 function _callAudit(action, id, v) {
-  return api.callAudit(action, id, v, getAuditKey());
+  return wx.cloud.callFunction({ name: 'auditStage', data: { action, id, v, key: getAuditKey() } })
+    .then(r => (r && r.result) || { ok: false });
 }
 function localToggle(rec, v) {
   rec.stageLog = rec.stageLog || {};
