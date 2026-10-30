@@ -33,6 +33,11 @@ Page({
   onLoad() {
     this.st = S.load();
     if (!this.st.calCursor) this.st.calCursor = this.st.selectedDate.slice(0, 7);
+    // 归一化：项目成员/待办补唯一 id（旧数据可能缺失）
+    this.st.projects.forEach(p => {
+      p.members.forEach(m => { if (!m.id) m.id = S.genId(); });
+      p.todos.forEach(t => { if (!t.id) t.id = S.genId(); });
+    });
     this.refresh();
   },
 
@@ -222,7 +227,7 @@ Page({
   delPMember(e) { const p = this._ap(); p.members.splice(+e.currentTarget.dataset.idx, 1); this.commit(); },
   addPMember() {
     if (!this.data.mName.trim()) return;
-    this._ap().members.push({ name: this.data.mName.trim(), role: this.data.mRole.trim() });
+    this._ap().members.push({ id: S.genId(), name: this.data.mName.trim(), role: this.data.mRole.trim() });
     this.setData({ mName: '', mRole: '' }); this.commit();
   },
   onMName(e) { this.setData({ mName: e.detail.value }); },
@@ -230,7 +235,7 @@ Page({
   togglePTodo(e) { const p = this._ap(); p.todos[+e.currentTarget.dataset.idx].done = !p.todos[+e.currentTarget.dataset.idx].done; this.commit(); },
   addPTodo() {
     if (!this.data.pTodo.trim()) return;
-    this._ap().todos.push({ text: this.data.pTodo.trim(), done: false });
+    this._ap().todos.push({ id: S.genId(), text: this.data.pTodo.trim(), done: false });
     this.setData({ pTodo: '' }); this.commit();
   },
   onPTodoText(e) { this.setData({ pTodo: e.detail.value }); },

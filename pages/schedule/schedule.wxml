@@ -199,7 +199,7 @@
 
     <view class="card">
       <view class="card-title"><view class="ttbar" style="background:var(--blue);box-shadow:0 0 8px var(--blue)"></view>人员分工<text class="en">{{activeProj.members.length}}</text></view>
-      <view class="member" wx:for="{{activeProj.members}}" wx:key="idx">
+      <view class="member" wx:for="{{activeProj.members}}" wx:key="id">
         <text class="m-name">{{item.name}}</text><text class="m-role">{{item.role}}</text>
         <text class="mini-act del" bindtap="delPMember" data-idx="{{index}}">删</text>
       </view>
@@ -212,7 +212,7 @@
 
     <view class="card">
       <view class="card-title"><view class="ttbar"></view>项目待办<text class="en">{{activeProj.todos.length}}</text></view>
-      <view class="todo" wx:for="{{activeProj.todos}}" wx:key="idx">
+      <view class="todo" wx:for="{{activeProj.todos}}" wx:key="id">
         <view class="todo-main">
           <view class="ck {{item.done?'ck-on':''}}" bindtap="togglePTodo" data-idx="{{index}}">{{item.done?'✓':''}}</view>
           <text class="{{item.done?'done-text':''}} grow">{{item.text}}</text>
@@ -227,7 +227,7 @@
 
     <view class="card">
       <view class="card-title"><view class="ttbar"></view>项目流程<text class="en">{{activeProj.steps.length}}</text></view>
-      <view class="step" wx:for="{{activeProj.steps}}" wx:key="idx">
+      <view class="step" wx:for="{{activeProj.steps}}" wx:key="no">
         <text class="step-no">{{item.no}}</text>
         <view class="ck {{item.done?'ck-on':''}}" bindtap="togglePStep" data-idx="{{index}}">{{item.done?'✓':''}}</view>
         <text class="{{item.done?'done-text':''}} grow">{{item.text}}</text>
