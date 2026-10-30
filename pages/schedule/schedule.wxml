@@ -45,7 +45,7 @@
 
     <!-- 无日期任务 -->
     <view class="card" wx:if="{{undatedView.length}}">
-      <view class="card-title"><view class="ttbar" style="background:var(--text3);box-shadow:0 0 8px var(--text3)"></view>无日期任务<text class="en">{{undatedView.length}}</text></view>
+      <view class="card-title"><view class="ttbar muted"></view>无日期任务<text class="en">{{undatedView.length}}</text></view>
       <view class="todo" wx:for="{{undatedView}}" wx:key="id">
         <view class="todo-main">
           <view class="ck {{item.done?'ck-on':''}}" bindtap="toggleTodo" data-id="{{item.id}}">{{item.done?'✓':''}}</view>
@@ -154,7 +154,7 @@
       </view>
     </view>
     <view class="card">
-      <view class="card-title"><view class="ttbar" style="background:var(--blue);box-shadow:0 0 8px var(--blue)"></view>新增/编辑模板</view>
+      <view class="card-title"><view class="ttbar blue"></view>新增/编辑模板</view>
       <input class="pf" placeholder="模板内容…" value="{{wText}}" bindinput="onWText"/>
       <view class="day-pick mt8">
         <view wx:for="{{dayNames}}" wx:key="*this" class="day-chip {{wDays[index]?'on':''}} {{index>=5?'we':''}}" bindtap="toggleWDay" data-day="{{index}}">{{item}}</view>
@@ -179,7 +179,7 @@
   <!-- ============ 项目 ============ -->
   <block wx:if="{{tab==='proj'}}">
     <view class="card">
-      <view class="card-title"><view class="ttbar" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></view>项目切换<text class="en">{{projects.length}}</text></view>
+      <view class="card-title"><view class="ttbar amber"></view>项目切换<text class="en">{{projects.length}}</text></view>
       <scroll-view scroll-x class="proj-scroll">
         <view class="proj-chips">
           <view wx:for="{{projects}}" wx:key="id" class="proj-chip {{item.active?'on':''}}" bindtap="selectProject" data-id="{{item.id}}">{{item.name}}</view>
@@ -188,7 +188,7 @@
       </scroll-view>
     </view>
     <view class="card">
-      <view class="card-title"><view class="ttbar" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></view>{{activeProj.name}}<text class="en">{{activeProj.countLabel}}</text></view>
+      <view class="card-title"><view class="ttbar amber"></view>{{activeProj.name}}<text class="en">{{activeProj.countLabel}}</text></view>
       <view class="field"><label>名称</label><view class="val"><input class="pf" value="{{activeProj.name}}" bindinput="onPName"/></view></view>
       <view class="field"><label>起止</label><view class="val row2">
         <picker mode="date" value="{{activeProj.start}}" bindchange="onPStart"><view class="pf sel mini">{{activeProj.start || '开始'}}</view></picker>
@@ -198,7 +198,7 @@
     </view>
 
     <view class="card">
-      <view class="card-title"><view class="ttbar" style="background:var(--blue);box-shadow:0 0 8px var(--blue)"></view>人员分工<text class="en">{{activeProj.members.length}}</text></view>
+      <view class="card-title"><view class="ttbar blue"></view>人员分工<text class="en">{{activeProj.members.length}}</text></view>
       <view class="member" wx:for="{{activeProj.members}}" wx:key="id">
         <text class="m-name">{{item.name}}</text><text class="m-role">{{item.role}}</text>
         <text class="mini-act del" bindtap="delPMember" data-idx="{{index}}">删</text>
@@ -246,7 +246,7 @@
   <!-- ============ 提醒 ============ -->
   <block wx:if="{{tab==='remind'}}">
     <view class="card">
-      <view class="card-title"><view class="ttbar" style="background:var(--red);box-shadow:0 0 8px var(--red)"></view>提醒中心<text class="en">{{reminders.length}}</text></view>
+      <view class="card-title"><view class="ttbar red"></view>提醒中心<text class="en">{{reminders.length}}</text></view>
       <view wx:if="{{!reminders.length}}" class="empty">没有逾期或今日待办 🎉</view>
       <view class="todo" wx:for="{{reminders}}" wx:key="id">
         <view class="todo-main">

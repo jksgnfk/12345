@@ -15,8 +15,7 @@
 .grow { flex: 1; }
 .pf.sel { color: var(--text2); }
 
-/* 任务项 */
-.empty { text-align: center; color: var(--text3); font-size: 13px; padding: 18px 0; }
+/* 任务项（空状态样式见全局 app.wxss） */
 .todo { padding: 11px 0; border-bottom: 1px solid #eef6f1; }
 .todo:last-child { border-bottom: none; }
 .todo-main { display: flex; align-items: flex-start; gap: 10px; }

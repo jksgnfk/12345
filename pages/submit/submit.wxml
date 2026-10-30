@@ -18,9 +18,9 @@
       <label class="req">付款方式</label>
       <view class="val"><picker mode="selector" range="{{pays}}" value="{{payIndex}}" bindchange="onPay"><view class="pf picker-val">{{pays[payIndex]}}</view></picker></view>
     </view>
-    <view class="field">
+    <view class="field field-switch">
       <label>含服装采购</label>
-      <view class="val" style="display:flex;align-items:center;justify-content:flex-end;"><switch checked="{{clothing}}" bindchange="onClothing" color="#1faa6b"/></view>
+      <view class="val"><switch checked="{{clothing}}" bindchange="onClothing" color="#1faa6b"/></view>
     </view>
     <view class="field"><label class="req">报销事由</label><view class="val"><input class="pf" value="{{reason}}" bindinput="onReason" placeholder="如：迎新活动物资采购"/></view></view>
     <view class="field"><label class="req">报销总额</label><view class="val"><input class="pf" type="digit" value="{{total}}" bindinput="onTotal" placeholder="¥0.00"/></view></view>
@@ -64,7 +64,7 @@
   <!-- 我的提交记录 -->
   <view class="card mt12">
     <view class="card-title"><view class="ttbar"></view>我的提交记录<span class="en">TRACKING</span></view>
-    <view wx:if="{{myList.length===0}}" class="t3">尚未提交任何报销</view>
+    <view wx:if="{{myList.length===0}}" class="empty">尚未提交任何报销</view>
     <view class="rec-item" wx:for="{{myList}}" wx:key="id" bindtap="openMy" data-id="{{item.id}}">
       <view class="rec-top"><text class="rec-reason">{{item.reason}}</text><text class="rec-stage badge b-spare">{{item.stage}}</text></view>
       <view class="rec-meta mono">{{item.name}} · {{item.type}} · {{item.total}} · 材料{{item.count}}项</view>

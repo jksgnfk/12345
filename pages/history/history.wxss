@@ -14,8 +14,3 @@
 .rec-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
 
 .key-card .pf { letter-spacing: 2px; }
-.btn-ghost {
-  background: transparent; color: var(--text2);
-  border: 1px solid var(--line); border-radius: 10px;
-}
-.btn-ghost::after { border: none; }

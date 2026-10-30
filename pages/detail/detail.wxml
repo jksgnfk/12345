@@ -2,7 +2,7 @@
   <!-- 基本信息 -->
   <view class="card">
     <view class="card-title"><view class="ttbar"></view>报销信息<span class="en">INFO</span>
-      <text class="rec-stage {{badge}}" style="margin-left:auto;">{{stage}}</text>
+      <text class="rec-stage {{badge}} ct-badge">{{stage}}</text>
     </view>
     <view class="info-row"><text class="k">报销人</text><text class="v">{{rec.name}}{{rec.academy?'（'+rec.academy:''}}{{rec.dept?' / '+rec.dept:''}}{{rec.academy||rec.dept?'）':''}}</text></view>
     <view class="info-row"><text class="k">类型</text><text class="v">{{rec.type}}{{rec.clothing?' · 含服装采购':''}}</text></view>
@@ -55,4 +55,4 @@
     <button class="btn btn-ghost" bindtap="goBack">返回</button>
   </block>
 </view>
-<view wx:else class="wrap"><view class="t3" style="text-align:center;margin-top:40px;">记录不存在或已删除</view></view>
+<view wx:else class="wrap"><view class="empty" style="margin-top:40px;">记录不存在或已删除</view></view>

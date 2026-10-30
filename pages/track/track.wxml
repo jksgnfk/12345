@@ -1,7 +1,7 @@
 <view class="wrap">
   <view class="card">
     <view class="card-title"><view class="ttbar"></view>我的报销进度<span class="en">TRACKING</span></view>
-    <view wx:if="{{list.length===0}}" class="t3">尚未提交任何报销，请到「提交端」填报</view>
+    <view wx:if="{{list.length===0}}" class="empty">尚未提交任何报销，请到「提交端」填报</view>
     <view class="rec-item" wx:for="{{list}}" wx:key="id" bindtap="openDetail" data-id="{{item.id}}">
       <view class="rec-top">
         <text class="rec-reason">{{item.reason}}</text>
