@@ -43,6 +43,13 @@
     </view>
   </view>
 
+  <view class="grid mt12">
+    <view class="ent s" style="grid-column:1 / -1;" bindtap="goSchedule">
+      <view class="ent-ic">📅</view><view class="ent-t">日程待办</view>
+      <view class="ent-d mono">SCHEDULE · 任务 / 日历 / 周常 / 项目</view>
+    </view>
+  </view>
+
   <view class="card mt16">
     <view class="card-title"><view class="ttbar"></view>使用说明<span class="en">GUIDE</span></view>
     <view class="guide t2">
@@ -50,6 +57,7 @@
       <view>· 进度查询：免密钥，查看本人提交单据的处理进度。</view>
       <view>· 最终权限：最高管理员密钥进入，检索全部历史报销记录（含搜索）。</view>
       <view>· 审核端：输入密钥进入，勾选处理进程（审核中 → 老师已签字 → 计财处 → 已完成）。</view>
+      <view>· 日程待办：个人任务管理，含待办、月历、周视图、周常任务、项目备忘与提醒（本地存储）。</view>
     </view>
   </view>
 </view>

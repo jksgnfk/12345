@@ -1,0 +1,267 @@
+<!-- pages/schedule/schedule.wxml -->
+<view class="wrap">
+
+  <!-- 顶部标签切换 -->
+  <view class="tabs">
+    <view class="tab {{tab==='todo'?'on':''}}" bindtap="switchTab" data-tab="todo">待办</view>
+    <view class="tab {{tab==='cal'?'on':''}}" bindtap="switchTab" data-tab="cal">日历</view>
+    <view class="tab {{tab==='week'?'on':''}}" bindtap="switchTab" data-tab="week">周视图</view>
+    <view class="tab {{tab==='weekly'?'on':''}}" bindtap="switchTab" data-tab="weekly">周常</view>
+    <view class="tab {{tab==='proj'?'on':''}}" bindtap="switchTab" data-tab="proj">项目</view>
+    <view class="tab {{tab==='remind'?'on':''}}" bindtap="switchTab" data-tab="remind">提醒</view>
+  </view>
+
+  <!-- 日期导航条（待办/周视图/提醒共用） -->
+  <view class="datebar" wx:if="{{tab==='todo' || tab==='week' || tab==='remind'}}">
+    <view class="db-nav" bindtap="prevDay">‹</view>
+    <view class="db-mid">
+      <text class="db-date">{{selLabel}}</text>
+      <text class="db-week">{{selWeekday}}</text>
+    </view>
+    <view class="db-nav" bindtap="nextDay">›</view>
+    <view class="db-today" bindtap="goToday">今</view>
+  </view>
+
+  <!-- ============ 待办 ============ -->
+  <block wx:if="{{tab==='todo'}}">
+    <view class="card">
+      <view class="card-title"><view class="ttbar"></view>添加任务<text class="en">NEW</text></view>
+      <input class="pf" placeholder="任务内容…" value="{{newText}}" bindinput="onNewText" confirm-type="done" bindconfirm="addTodo"/>
+      <view class="row2 mt8">
+        <picker class="grow" mode="selector" range="{{prioOptions}}" range-key="label" value="{{prioIndex}}" bindchange="onPrioChange">
+          <view class="pf sel">优先级：{{prioOptions[prioIndex].label}}</view>
+        </picker>
+        <picker class="grow" mode="selector" range="{{catOptions}}" value="{{catIndex}}" bindchange="onCatChange">
+          <view class="pf sel">分类：{{catOptions[catIndex]}}</view>
+        </picker>
+      </view>
+      <view class="row2 mt8">
+        <picker class="grow" mode="date" value="{{newDue}}" bindchange="onDueChange">
+          <view class="pf sel">截止：{{newDue || '未设置'}}</view>
+        </picker>
+        <view class="btn btn-primary grow" bindtap="addTodo">添加</view>
+      </view>
+    </view>
+
+    <!-- 无日期任务 -->
+    <view class="card" wx:if="{{undatedView.length}}">
+      <view class="card-title"><view class="ttbar" style="background:var(--text3);box-shadow:0 0 8px var(--text3)"></view>无日期任务<text class="en">{{undatedView.length}}</text></view>
+      <view class="todo" wx:for="{{undatedView}}" wx:key="id">
+        <view class="todo-main">
+          <view class="ck {{item.done?'ck-on':''}}" bindtap="toggleTodo" data-id="{{item.id}}">{{item.done?'✓':''}}</view>
+          <view class="todo-body">
+            <text class="{{item.done?'done-text':''}}">{{item.text}}</text>
+            <view class="todo-meta">
+              <text class="prio p-{{item.priority}}">{{item.priority}}</text>
+              <text class="cat">{{item.category}}</text>
+            </view>
+          </view>
+          <view class="todo-acts">
+            <text class="mini-act" bindtap="assignToday" data-id="{{item.id}}">设为今日</text>
+            <text class="mini-act del" bindtap="delTodo" data-id="{{item.id}}">删</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 当日任务 -->
+    <view class="card">
+      <view class="card-title"><view class="ttbar"></view>当日任务<text class="en">{{todosView.length}}</text></view>
+      <view wx:if="{{!todosView.length}}" class="empty">这一天还没有任务</view>
+      <view class="todo" wx:for="{{todosView}}" wx:key="id">
+        <view class="todo-main">
+          <view class="ck {{item.done?'ck-on':''}}" bindtap="toggleTodo" data-id="{{item.id}}">{{item.done?'✓':''}}</view>
+          <view class="todo-body">
+            <text class="{{item.done?'done-text':''}}">{{item.text}}</text>
+            <view class="todo-meta">
+              <text class="prio p-{{item.priority}}">{{item.priority}}</text>
+              <text class="cat">{{item.category}}</text>
+              <text class="due {{item.overdue?'over':''}} {{item.done?'fin':''}}">{{item.dueLabel}}</text>
+              <text class="wk" wx:if="{{item.weekly}}">周常</text>
+            </view>
+          </view>
+          <view class="todo-acts">
+            <text class="mini-act del" bindtap="delTodo" data-id="{{item.id}}">删</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- ============ 日历 ============ -->
+  <block wx:if="{{tab==='cal'}}">
+    <view class="card">
+      <view class="cal-head">
+        <view class="db-nav" bindtap="calPrev">‹</view>
+        <view class="cal-title">{{calTitle}}</view>
+        <view class="db-nav" bindtap="calNext">›</view>
+        <view class="db-today" bindtap="calToday">今</view>
+      </view>
+      <view class="cal-grid">
+        <view class="cal-wd">一</view><view class="cal-wd">二</view><view class="cal-wd">三</view>
+        <view class="cal-wd">四</view><view class="cal-wd">五</view><view class="cal-wd">六</view><view class="cal-wd">日</view>
+        <view wx:for="{{calCells}}" wx:key="date" class="cal-cell {{item.out?'out':''}} {{item.isToday?'today':''}} {{item.isSelected?'sel':''}}" bindtap="tapCalCell" data-date="{{item.date}}">
+          <text class="cal-d">{{item.day}}</text>
+          <view class="cal-marks" wx:if="{{item.hasOpen || item.hasDone || item.hasWeekly}}">
+            <view class="mk {{item.hasWeekly?'wk':''}}"></view>
+            <view class="mk {{item.hasOpen && !item.hasWeekly?'open':''}}"></view>
+            <view class="mk {{item.hasDone?'done':''}}"></view>
+          </view>
+        </view>
+      </view>
+      <view class="legend">
+        <text class="lg"><i class="mk open"></i>待办</text>
+        <text class="lg"><i class="mk done"></i>完成</text>
+        <text class="lg"><i class="mk wk"></i>周常</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- ============ 周视图 ============ -->
+  <block wx:if="{{tab==='week'}}">
+    <view class="card">
+      <view class="card-title"><view class="ttbar"></view>本周一览<text class="en">{{weekTitle}}</text></view>
+      <scroll-view scroll-x class="week-scroll">
+        <view class="week-row">
+          <view wx:for="{{weekDays}}" wx:key="date" class="week-col {{item.isToday?'w-today':''}} {{item.isSelected?'w-sel':''}}" bindtap="tapWeekCell" data-date="{{item.date}}">
+            <view class="wc-d">{{item.day}}</view>
+            <view class="wc-wd">{{item.wd}}</view>
+            <view class="wc-list">
+              <view wx:for="{{item.todos}}" wx:for-item="t" wx:key="id" class="wc-item p-{{t.priority}} {{t.done?'wc-done':''}}">{{t.text}}</view>
+              <view wx:if="{{!item.todos.length}}" class="wc-empty">—</view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </block>
+
+  <!-- ============ 周常 ============ -->
+  <block wx:if="{{tab==='weekly'}}">
+    <view class="card">
+      <view class="card-title"><view class="ttbar"></view>周常模板<text class="en">{{weeklyList.length}}</text></view>
+      <view wx:if="{{!weeklyList.length}}" class="empty">暂无周常模板</view>
+      <view class="wk-tpl" wx:for="{{weeklyList}}" wx:key="id">
+        <view class="wk-top">
+          <text class="wk-text">{{item.text}}</text>
+          <text class="prio p-{{item.priority}}">{{item.priority}}</text>
+        </view>
+        <view class="wk-meta">{{item.daysLabel}} · {{item.time || '不定时'}} · {{item.category}} · {{item.enabled?'启用':'停用'}}</view>
+        <view class="wk-acts">
+          <text class="mini-act" bindtap="toggleWEnabled" data-id="{{item.id}}">{{item.enabled?'停用':'启用'}}</text>
+          <text class="mini-act del" bindtap="delWeekly" data-id="{{item.id}}">删除</text>
+        </view>
+      </view>
+    </view>
+    <view class="card">
+      <view class="card-title"><view class="ttbar" style="background:var(--blue);box-shadow:0 0 8px var(--blue)"></view>新增/编辑模板</view>
+      <input class="pf" placeholder="模板内容…" value="{{wText}}" bindinput="onWText"/>
+      <view class="day-pick mt8">
+        <view wx:for="{{dayNames}}" wx:key="*this" class="day-chip {{wDays[index]?'on':''}} {{index>=5?'we':''}}" bindtap="toggleWDay" data-day="{{index}}">{{item}}</view>
+      </view>
+      <view class="row2 mt8">
+        <picker class="grow" mode="selector" range="{{prioOptions}}" range-key="label" value="{{wPrioIndex}}" bindchange="onWPrio">
+          <view class="pf sel">优先级：{{prioOptions[wPrioIndex].label}}</view>
+        </picker>
+        <picker class="grow" mode="selector" range="{{catOptions}}" value="{{wCatIndex}}" bindchange="onWCat">
+          <view class="pf sel">分类：{{catOptions[wCatIndex]}}</view>
+        </picker>
+      </view>
+      <view class="row2 mt8">
+        <picker class="grow" mode="time" value="{{wTime}}" bindchange="onWTime">
+          <view class="pf sel">时间：{{wTime || '不定时'}}</view>
+        </picker>
+        <view class="btn btn-primary grow" bindtap="addWeekly">添加模板</view>
+      </view>
+    </view>
+  </block>
+
+  <!-- ============ 项目 ============ -->
+  <block wx:if="{{tab==='proj'}}">
+    <view class="card">
+      <view class="card-title"><view class="ttbar" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></view>项目切换<text class="en">{{projects.length}}</text></view>
+      <scroll-view scroll-x class="proj-scroll">
+        <view class="proj-chips">
+          <view wx:for="{{projects}}" wx:key="id" class="proj-chip {{item.active?'on':''}}" bindtap="selectProject" data-id="{{item.id}}">{{item.name}}</view>
+          <view class="proj-chip add" bindtap="newProject">＋新建</view>
+        </view>
+      </scroll-view>
+    </view>
+    <view class="card">
+      <view class="card-title"><view class="ttbar" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></view>{{activeProj.name}}<text class="en">{{activeProj.countLabel}}</text></view>
+      <view class="field"><label>名称</label><view class="val"><input class="pf" value="{{activeProj.name}}" bindinput="onPName"/></view></view>
+      <view class="field"><label>起止</label><view class="val row2">
+        <picker mode="date" value="{{activeProj.start}}" bindchange="onPStart"><view class="pf sel mini">{{activeProj.start || '开始'}}</view></picker>
+        <picker mode="date" value="{{activeProj.end}}" bindchange="onPEnd"><view class="pf sel mini">{{activeProj.end || '结束'}}</view></picker>
+      </view></view>
+      <view class="period-badge {{activeProj.periodClass}}">{{activeProj.periodLabel}}</view>
+    </view>
+
+    <view class="card">
+      <view class="card-title"><view class="ttbar" style="background:var(--blue);box-shadow:0 0 8px var(--blue)"></view>人员分工<text class="en">{{activeProj.members.length}}</text></view>
+      <view class="member" wx:for="{{activeProj.members}}" wx:key="idx">
+        <text class="m-name">{{item.name}}</text><text class="m-role">{{item.role}}</text>
+        <text class="mini-act del" bindtap="delPMember" data-idx="{{index}}">删</text>
+      </view>
+      <view class="row2 mt8">
+        <input class="pf grow" placeholder="姓名" value="{{mName}}" bindinput="onMName"/>
+        <input class="pf grow" placeholder="分工" value="{{mRole}}" bindinput="onMRole"/>
+        <view class="btn btn-ghost" bindtap="addPMember">加</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-title"><view class="ttbar"></view>项目待办<text class="en">{{activeProj.todos.length}}</text></view>
+      <view class="todo" wx:for="{{activeProj.todos}}" wx:key="idx">
+        <view class="todo-main">
+          <view class="ck {{item.done?'ck-on':''}}" bindtap="togglePTodo" data-idx="{{index}}">{{item.done?'✓':''}}</view>
+          <text class="{{item.done?'done-text':''}} grow">{{item.text}}</text>
+          <text class="mini-act del" bindtap="delPTodo" data-idx="{{index}}">删</text>
+        </view>
+      </view>
+      <view class="row2 mt8">
+        <input class="pf grow" placeholder="待办内容…" value="{{pTodo}}" bindinput="onPTodoText"/>
+        <view class="btn btn-ghost" bindtap="addPTodo">加</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-title"><view class="ttbar"></view>项目流程<text class="en">{{activeProj.steps.length}}</text></view>
+      <view class="step" wx:for="{{activeProj.steps}}" wx:key="idx">
+        <text class="step-no">{{item.no}}</text>
+        <view class="ck {{item.done?'ck-on':''}}" bindtap="togglePStep" data-idx="{{index}}">{{item.done?'✓':''}}</view>
+        <text class="{{item.done?'done-text':''}} grow">{{item.text}}</text>
+        <text class="mini-act" bindtap="movePStep" data-idx="{{index}}" data-dir="-1">↑</text>
+        <text class="mini-act" bindtap="movePStep" data-idx="{{index}}" data-dir="1">↓</text>
+        <text class="mini-act del" bindtap="delPStep" data-idx="{{index}}">删</text>
+      </view>
+      <view class="row2 mt8">
+        <input class="pf grow" placeholder="流程步骤…" value="{{pStep}}" bindinput="onPStepText"/>
+        <view class="btn btn-ghost" bindtap="addPStep">加</view>
+      </view>
+      <view class="btn-row"><view class="btn btn-line" bindtap="exportProject">导出项目备忘</view><view class="btn btn-danger" bindtap="delProject">删除项目</view></view>
+    </view>
+  </block>
+
+  <!-- ============ 提醒 ============ -->
+  <block wx:if="{{tab==='remind'}}">
+    <view class="card">
+      <view class="card-title"><view class="ttbar" style="background:var(--red);box-shadow:0 0 8px var(--red)"></view>提醒中心<text class="en">{{reminders.length}}</text></view>
+      <view wx:if="{{!reminders.length}}" class="empty">没有逾期或今日待办 🎉</view>
+      <view class="todo" wx:for="{{reminders}}" wx:key="id">
+        <view class="todo-main">
+          <view class="ck {{item.done?'ck-on':''}}" bindtap="toggleTodo" data-id="{{item.id}}">{{item.done?'✓':''}}</view>
+          <view class="todo-body">
+            <text class="{{item.done?'done-text':''}}">{{item.text}}</text>
+            <view class="todo-meta">
+              <text class="prio p-{{item.priority}}">{{item.priority}}</text>
+              <text class="due {{item.type==='overdue'?'over':''}}">{{item.dueLabel}}</text>
+            </view>
+          </view>
+          <text class="mini-act" bindtap="gotoDate" data-date="{{item.due}}">查看</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+</view>

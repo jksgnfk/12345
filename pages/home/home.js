@@ -6,6 +6,7 @@ Page({
     this.setData({ user: store.getUser() || {} });
   },
   goSubmit() { wx.navigateTo({ url: '/pages/submit/submit' }); },
+  goSchedule() { wx.navigateTo({ url: '/pages/schedule/schedule' }); },
   goTrack() { wx.navigateTo({ url: '/pages/track/track' }); },
   goHistory() { wx.navigateTo({ url: '/pages/history/history' }); },
   goAudit() {

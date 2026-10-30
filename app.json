@@ -6,7 +6,8 @@
     "pages/track/track",
     "pages/audit/audit",
     "pages/history/history",
-    "pages/detail/detail"
+    "pages/detail/detail",
+    "pages/schedule/schedule"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
