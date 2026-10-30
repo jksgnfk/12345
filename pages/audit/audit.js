@@ -43,7 +43,8 @@ Page({
           id: r.id, reason: r.reason, name: r.name, type: r.type, total: store.fmtMoney(r.total),
           stage, badge,
           seg0: 0 < filled ? 'seg-on' : '', seg1: 1 < filled ? 'seg-on' : '',
-          seg2: 2 < filled ? 'seg-on' : '', seg3: 3 < filled ? 'seg-on' : ''
+          seg2: 2 < filled ? 'seg-on' : '', seg3: 3 < filled ? 'seg-on' : '',
+          rejectReason: r.rejected ? (r.rejectReason || '') : ''
         };
       })
     });

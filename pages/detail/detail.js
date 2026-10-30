@@ -6,9 +6,14 @@ function fmtTime(ts) {
   const p = x => x < 10 ? '0' + x : x;
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
+function roleLabel(r) {
+  if (r === 'admin') return '最高管理';
+  if (r === 'audit') return '审核员';
+  return r || '审核员';
+}
 
 Page({
-  data: { mode: 'track', rec: null, stage: '', badge: '', total: '', matList: [], pipe: [] },
+  data: { mode: 'track', rec: null, stage: '', badge: '', total: '', matList: [], pipe: [], showReject: false, rejectText: '' },
   onLoad(q) {
     this._id = q.id;
     this.setData({ mode: q.mode || 'track' });
@@ -31,7 +36,12 @@ Page({
         time: (r.stageLog && r.stageLog[s.k]) ? fmtTime(r.stageLog[s.k]) : ''
       };
     });
-    this.setData({ rec: r, stage, badge, total: store.fmtMoney(r.total), matList, pipe });
+    this.setData({
+      rec: r, stage, badge, total: store.fmtMoney(r.total), matList, pipe,
+      rejectReason: r.rejected ? (r.rejectReason || '') : '',
+      rejectAt: (r.rejected && r.rejectAt) ? fmtTime(r.rejectAt) : '',
+      rejectBy: r.rejected ? roleLabel(r.rejectBy) : ''
+    });
   },
   tapNode(e) {
     if (this.data.mode !== 'audit') return;
@@ -40,14 +50,21 @@ Page({
     if (!r) return;
     store.toggleStage(r, k).then(() => this.render());
   },
-  reject() {
+  openReject() {
+    this.setData({ showReject: true, rejectText: '' });
+  },
+  onRejectInput(e) { this.setData({ rejectText: e.detail.value }); },
+  cancelReject() { this.setData({ showReject: false }); },
+  noop() {},
+  confirmReject() {
     const r = store.getRecord(this._id);
     if (!r) return;
-    wx.showModal({
-      title: '退回修改', content: '确认将该单据退回提交人修改？',
-      success: (res) => {
-        if (res.confirm) { store.rejectRecord(r).then(() => { this.render(); wx.showToast({ title: '已退回', icon: 'none' }); }); }
-      }
+    const txt = (this.data.rejectText || '').trim();
+    if (!txt) { wx.showToast({ title: '请填写退回原因', icon: 'none' }); return; }
+    store.rejectRecord(r, txt).then(() => {
+      this.setData({ showReject: false });
+      this.render();
+      wx.showToast({ title: '已退回', icon: 'none' });
     });
   },
   previewImg(e) {

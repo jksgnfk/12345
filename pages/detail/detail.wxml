@@ -40,14 +40,18 @@
       </view>
       <view class="pline"></view>
     </view>
-    <view wx:if="{{rec.rejected}}" class="rej-note">该单据已退回修改，需重新提交。</view>
-    <view wx:if="{{mode==='audit'}}" class="t2 mt8">点击上方节点即可勾选 / 撤销进度，系统自动记录达成时间。</view>
+      <view wx:if="{{rec.rejected}}" class="rej-note">
+        <view class="rej-t">⚠ 该单据已退回修改，需重新提交</view>
+        <view wx:if="{{rejectReason}}" class="rej-reason">退回原因：{{rejectReason}}</view>
+        <view wx:if="{{rejectBy}}" class="rej-by mono">退回人：{{rejectBy}}<text wx:if="{{rejectAt}}"> · {{rejectAt}}</text></view>
+      </view>
+      <view wx:if="{{mode==='audit'}}" class="t2 mt8">点击上方节点即可勾选 / 撤销进度，系统自动记录达成时间。</view>
   </view>
 
   <!-- 操作 -->
   <block wx:if="{{mode==='audit'}}">
     <view class="btn-row">
-      <button class="btn btn-danger" bindtap="reject">退回修改</button>
+      <button class="btn btn-danger" bindtap="openReject">退回修改</button>
       <button class="btn btn-line" bindtap="goBack">返回列表</button>
     </view>
   </block>
@@ -55,4 +59,19 @@
     <button class="btn btn-ghost" bindtap="goBack">返回</button>
   </block>
 </view>
+
 <view wx:else class="wrap"><view class="empty" style="margin-top:40px;">记录不存在或已删除</view></view>
+
+<!-- 退回留言面板 -->
+<view wx:if="{{showReject}}" class="mask" bindtap="cancelReject">
+  <view class="sheet" catchtap="noop">
+    <view class="sheet-title">退回修改 · 请填写原因</view>
+    <view class="hint">退回后提交人可见此留言，请写明退回原因。</view>
+    <textarea class="rej-area" placeholder="请输入退回原因（必填）" placeholder-class="rej-ph" value="{{rejectText}}" bindinput="onRejectInput" maxlength="200" auto-focus/>
+    <view class="sheet-tip" wx:if="{{!rejectText}}">未填写原因将无法退回</view>
+    <view class="btn-row">
+      <button class="btn btn-line" bindtap="cancelReject">取消</button>
+      <button class="btn btn-danger" bindtap="confirmReject">确认退回</button>
+    </view>
+  </view>
+</view>

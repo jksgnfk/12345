@@ -160,11 +160,14 @@ function _callAudit(action, id, v) {
   return wx.cloud.callFunction({ name: 'auditStage', data: { action, id, v, key: getAuditKey() } })
     .then(r => (r && r.result) || { ok: false });
 }
+function clearRejectActive(rec) {
+  rec.rejected = false; rec.rejectReason = ''; rec.rejectAt = 0; rec.rejectBy = '';
+}
 function localToggle(rec, v) {
   rec.stageLog = rec.stageLog || {};
-  if (rec.rejected && v <= rec.stage) rec.rejected = false;
-  else if (v > rec.stage) { rec.stage = v; rec.stageLog[v] = Date.now(); rec.rejected = false; }
-  else { rec.stage = v; rec.rejected = false; }
+  if (rec.rejected && v <= rec.stage) clearRejectActive(rec);
+  else if (v > rec.stage) { rec.stage = v; rec.stageLog[v] = Date.now(); clearRejectActive(rec); }
+  else { rec.stage = v; clearRejectActive(rec); }
   rec.updatedAt = Date.now();
   return _saveOne(rec);
 }
@@ -177,18 +180,25 @@ function toggleStage(rec, v) {
   }
   return localToggle(rec, v);
 }
-function localReject(rec) {
-  rec.rejected = true; rec.stage = 0; rec.updatedAt = Date.now();
+function localReject(rec, reason, by) {
+  rec.rejected = true; rec.stage = 0;
+  rec.rejectReason = reason || '';
+  rec.rejectAt = Date.now();
+  rec.rejectBy = by || '审核员';
+  rec.rejectLog = rec.rejectLog || [];
+  rec.rejectLog.push({ reason: rec.rejectReason, by: rec.rejectBy, at: rec.rejectAt });
+  rec.updatedAt = Date.now();
   return _saveOne(rec);
 }
-function rejectRecord(rec) {
+function rejectRecord(rec, reason) {
+  const by = getAuditRole() || '审核员';
   if (CLOUD_ENABLED && wx.cloud) {
-    return _callAudit('reject', rec.id).then(res => {
+    return _callAudit('reject', rec.id, { reason: reason || '', by }).then(res => {
       if (res.ok) { mergeRecord(res.record); return res.record; }
-      return localReject(rec);
-    }).catch(() => localReject(rec));
+      return localReject(rec, reason, by);
+    }).catch(() => localReject(rec, reason, by));
   }
-  return localReject(rec);
+  return localReject(rec, reason, by);
 }
 
 /* ---------- 统计 ---------- */

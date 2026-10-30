@@ -28,7 +28,8 @@ Page({
           seg1: 1 < filled ? 'seg-on' : '',
           seg2: 2 < filled ? 'seg-on' : '',
           seg3: 3 < filled ? 'seg-on' : '',
-          time: fmtTime(r.updatedAt)
+          time: fmtTime(r.updatedAt),
+          rejectReason: r.rejected ? (r.rejectReason || '') : ''
         };
       })
     });

@@ -29,9 +29,9 @@ function collectFileIDs(rec) {
 
 function applyToggle(r, v) {
   r.stageLog = r.stageLog || {};
-  if (r.rejected && v <= r.stage) r.rejected = false;
-  else if (v > r.stage) { r.stage = v; r.stageLog[v] = Date.now(); r.rejected = false; }
-  else { r.stage = v; r.rejected = false; }
+  if (r.rejected && v <= r.stage) { r.rejected = false; r.rejectReason = ''; r.rejectAt = 0; r.rejectBy = ''; }
+  else if (v > r.stage) { r.stage = v; r.stageLog[v] = Date.now(); r.rejected = false; r.rejectReason = ''; r.rejectAt = 0; r.rejectBy = ''; }
+  else { r.stage = v; r.rejected = false; r.rejectReason = ''; r.rejectAt = 0; r.rejectBy = ''; }
 }
 
 exports.main = async (event) => {
@@ -46,7 +46,13 @@ exports.main = async (event) => {
       const r = res && res.data;
       if (!r) return { ok: false, msg: '记录不存在' };
       if (action === 'reject') {
+        const info = (v && typeof v === 'object') ? v : {};
         r.rejected = true; r.stage = 0;
+        r.rejectReason = (info.reason || '').toString();
+        r.rejectAt = Date.now();
+        r.rejectBy = (info.by || '审核员').toString();
+        r.rejectLog = r.rejectLog || [];
+        r.rejectLog.push({ reason: r.rejectReason, by: r.rejectBy, at: r.rejectAt });
       } else {
         applyToggle(r, Number(v) || 0);
       }

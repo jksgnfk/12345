@@ -14,6 +14,7 @@
         <view class="seg {{item.seg3}}"></view>
       </view>
       <view class="rec-meta mono">{{item.type}} · {{item.total}} · 更新 {{item.time}}</view>
+      <view wx:if="{{item.rejected && item.rejectReason}}" class="rej-mini">↩ 退回原因：{{item.rejectReason}}</view>
     </view>
   </view>
   <view class="t3" style="text-align:center;">进度查询免密钥，仅显示您本人提交的单据</view>

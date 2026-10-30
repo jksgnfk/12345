@@ -37,6 +37,7 @@
           <view class="seg {{item.seg0}}"></view><view class="seg {{item.seg1}}"></view><view class="seg {{item.seg2}}"></view><view class="seg {{item.seg3}}"></view>
         </view>
         <view class="rec-meta mono">{{item.name}} · {{item.type}} · {{item.total}}</view>
+        <view wx:if="{{item.rejected && item.rejectReason}}" class="rej-mini">↩ 退回原因：{{item.rejectReason}}</view>
       </view>
     </view>
 
