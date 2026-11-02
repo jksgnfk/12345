@@ -22,7 +22,7 @@
       <label>含服装采购</label>
       <view class="val"><switch checked="{{clothing}}" bindchange="onClothing" color="#1faa6b"/></view>
     </view>
-    <view class="field"><label class="req">报销事由</label><view class="val"><input class="pf" value="{{reason}}" bindinput="onReason" placeholder="如：迎新活动物资采购"/></view></view>
+    <view class="field"><label class="req">报销事由</label><view class="val"><textarea class="pf" value="{{reason}}" bindinput="onReason" placeholder="如：迎新活动物资采购" auto-height maxlength="200"/></view></view>
     <view class="field"><label class="req">报销总额</label><view class="val"><input class="pf" type="digit" value="{{total}}" bindinput="onTotal" placeholder="¥0.00"/></view></view>
     <view class="field"><label>备注</label><view class="val"><textarea class="pf" value="{{note}}" bindinput="onNote" placeholder="选填"/></view></view>
   </view>
@@ -57,7 +57,7 @@
   <!-- 汇总 + 提交 -->
   <view class="card summary">
     <view class="sum-row"><text>报销总额</text><text class="sum-money mono">{{totalFmt}}</text></view>
-    <view class="sum-row"><text>已上传材料</text><text class="mono">{{summaryCount}} 项</text></view>
+    <view class="sum-row"><text>已上传材料</text><text class="mono">{{summaryCount}} / 50 项</text></view>
     <button class="btn btn-primary mt12" bindtap="submit">提交报销</button>
   </view>
 

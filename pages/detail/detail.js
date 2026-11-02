@@ -1,4 +1,5 @@
 const store = require('../../utils/store.js');
+const exporter = require('../../utils/exporter.js');
 
 function fmtTime(ts) {
   if (!ts) return '';
@@ -87,5 +88,32 @@ Page({
   },
   goBack() {
     wx.navigateBack({ delta: 1, fail: () => wx.reLaunch({ url: '/pages/home/home' }) });
+  },
+
+  /* 一键导出该单据的全部图片与文件（整理为 zip 文件夹） */
+  exportMaterials() {
+    const r = this.data.rec;
+    if (!r) return;
+    wx.showLoading({ title: '打包中…', mask: true });
+    exporter.exportRecordMaterials(r)
+      .then((zipPath) => {
+        wx.hideLoading();
+        if (!zipPath) { wx.showToast({ title: '该单据暂无材料', icon: 'none' }); return; }
+        if (typeof wx.saveFileToDisk === 'function') {
+          wx.saveFileToDisk({
+            filePath: zipPath,
+            success: () => wx.showToast({ title: '已导出，请解压查看', icon: 'none' }),
+            fail: () => wx.showModal({ title: '导出完成', content: '压缩包已生成：\n' + zipPath, showCancel: false })
+          });
+        } else {
+          // 移动端不支持保存到磁盘：给出路径并提示在电脑版微信操作
+          wx.showModal({
+            title: '导出完成',
+            content: '已打包为 zip：\n' + zipPath + '\n\n当前端不支持直接保存到本地，请在电脑版微信中打开本小程序后导出。',
+            showCancel: false
+          });
+        }
+      })
+      .catch(() => { wx.hideLoading(); wx.showToast({ title: '导出失败', icon: 'none' }); });
   }
 });

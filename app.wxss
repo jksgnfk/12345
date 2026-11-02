@@ -69,9 +69,12 @@ view, text, input, textarea, scroll-view, button { box-sizing: border-box; }
 .field.field-switch .val { display: flex; align-items: center; justify-content: flex-end; }
 input.pf, textarea.pf, picker.pf {
   width: 100%; border: 1px solid var(--line); border-radius: 9px;
-  padding: 9px 10px; font-size: 14px; color: var(--text); background: var(--panel2);
+  padding: 9px 10px; font-size: 14px; line-height: 1.5; color: var(--text); background: var(--panel2);
+  vertical-align: middle;
 }
 textarea.pf { min-height: 64px; }
+/* 多行输入框：启用自适应高度后完整显示全部文字，避免被截断 */
+textarea.pf[auto-height], .pf-auto { height: auto; }
 
 /* 按钮 */
 .btn {

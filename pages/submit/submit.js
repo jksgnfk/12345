@@ -1,6 +1,7 @@
 const store = require('../../utils/store.js');
 
 const TYPES = ['活动', '采购', '差旅', '培训', '其他'];
+const MAX_FILES = 50; // 单次提交最多可上传的材料份数
 
 function countMats(rec) {
   let c = 0;
@@ -75,6 +76,13 @@ Page({
     this.refreshMats();
   },
 
+  /* 当前已选材料总份数 */
+  totalFiles() {
+    let c = 0;
+    Object.keys(this.data.files).forEach(k => { c += (this.data.files[k] || []).length; });
+    return c;
+  },
+
   chooseFile(e) {
     const key = e.currentTarget.dataset.key;
     const multiple = e.currentTarget.dataset.multiple;
@@ -82,23 +90,36 @@ Page({
     if (!multiple && cur.length > 0) {
       wx.showToast({ title: '该项仅支持单份', icon: 'none' }); return;
     }
+    const remain = MAX_FILES - this.totalFiles();
+    if (remain <= 0) {
+      wx.showToast({ title: '最多提交 ' + MAX_FILES + ' 份材料', icon: 'none' }); return;
+    }
     wx.showActionSheet({
       itemList: ['图片', '文件（PDF/Word/Excel/PPT）'],
       success: (res) => {
+        const finish = (files) => {
+          let added = files || [];
+          if (this.totalFiles() + added.length > MAX_FILES) {
+            added = added.slice(0, MAX_FILES - this.totalFiles());
+            wx.showToast({ title: '已自动截取至 ' + MAX_FILES + ' 份上限', icon: 'none' });
+          }
+          added.forEach(f => cur.push(f));
+          this.updateKey(key, cur);
+        };
         if (res.tapIndex === 0) {
           wx.chooseMedia({
-            count: multiple ? 9 : 1, mediaType: ['image'], sourceType: ['album', 'camera'],
+            count: Math.min(multiple ? MAX_FILES : 1, remain), mediaType: ['image'], sourceType: ['album', 'camera'],
             success: (r) => {
               const tasks = r.tempFiles.map(tf =>
                 store.uploadFile(tf.tempFilePath, 'img.jpg')
                   .then(res => ({ type: 'image', name: '图片', path: res.path, fileID: res.fileID || null, ext: 'IMG' }))
               );
-              Promise.all(tasks).then(files => { files.forEach(f => cur.push(f)); this.updateKey(key, cur); });
+              Promise.all(tasks).then(finish);
             }
           });
         } else {
           wx.chooseMessageFile({
-            count: multiple ? 9 : 1, type: 'file',
+            count: Math.min(multiple ? MAX_FILES : 1, remain), type: 'file',
             extension: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg'],
             success: (r) => {
               const tasks = r.tempFiles.map(tf => {
@@ -108,7 +129,7 @@ Page({
                 return store.uploadFile(tf.path, name)
                   .then(res => ({ type: isImg ? 'image' : 'file', name, path: res.path, fileID: res.fileID || null, ext: isImg ? 'IMG' : ext }));
               });
-              Promise.all(tasks).then(files => { files.forEach(f => cur.push(f)); this.updateKey(key, cur); });
+              Promise.all(tasks).then(finish);
             }
           });
         }
