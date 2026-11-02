@@ -288,6 +288,36 @@ function clearAll() {
   return localClear();
 }
 
+/* ---------- 自动清理：审核完毕(stage>=4)且超过 30 天未变动的记录 ---------- */
+const EXPIRE_MS = 30 * 24 * 3600 * 1000;
+function isExpired(rec) {
+  return (rec.stage >= 4) && ((rec.updatedAt || 0) < (Date.now() - EXPIRE_MS));
+}
+function triggerCloudCleanup() {
+  if (CLOUD_ENABLED && wx.cloud) {
+    return _callAudit('cleanup').then(res => (res && res.deleted) || 0).catch(() => null);
+  }
+  return Promise.resolve(null);
+}
+function cleanupExpired() {
+  if (!_records) return Promise.resolve(0);
+  const expired = _records.filter(isExpired);
+  // 本地先行删除（含本地文件释放）
+  expired.forEach(r => {
+    Object.keys(r.materials || {}).forEach(k => {
+      (r.materials[k] || []).forEach(f => { if (f.fileID) cloudDelete(f.fileID); else removeFile(f.path); });
+    });
+  });
+  if (expired.length) {
+    _records = _records.filter(r => !isExpired(r));
+    _persistLocal();
+  }
+  // 云端（若有）：触发服务端清理，覆盖云数据库与云存储
+  return triggerCloudCleanup()
+    .then(cnt => (cnt != null && cnt > 0) ? cnt : expired.length)
+    .catch(() => expired.length);
+}
+
 /* ---------- 用户 / 权限（本机会话） ---------- */
 function getUser() { return wx.getStorageSync(K_USER) || null; }
 function setUser(u) { wx.setStorageSync(K_USER, u); }
@@ -325,7 +355,7 @@ module.exports = {
   init, refresh, getRecords, getRecord, saveRecord, deleteRecord,
   toggleStage, rejectRecord, stageLabel, stats,
   ensureDir, removeFile, uploadFile,
-  exportJSON, importJSON, clearAll,
+  exportJSON, importJSON, clearAll, cleanupExpired,
   getUser, setUser, logout,
   getAuditRole, setAuditRole, clearAuditRole, verifyKey, ADMIN_KEY, AUDIT_KEY,
   getFinalAuth, setFinalAuth, clearFinalAuth, verifyFinalKey,

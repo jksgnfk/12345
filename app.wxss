@@ -75,6 +75,12 @@ input.pf, textarea.pf, picker.pf {
 textarea.pf { min-height: 64px; }
 /* 多行输入框：启用自适应高度后完整显示全部文字，避免被截断 */
 textarea.pf[auto-height], .pf-auto { height: auto; }
+/* 紧凑型多行输入：用于原本是单行、但内容可能较长的字段（备注/任务/步骤等） */
+textarea.pf.pf-ta { min-height: 42px; max-height: 200px; line-height: 1.5; padding: 9px 10px; }
+/* 标签宽度自适应：长文本字段(如备注)标签单独占行，输入区独占一行，避免挤压换行截断 */
+.field.field-block { display: block; }
+.field.field-block > label { display: block; width: auto; padding: 0 0 6px; }
+.field.field-block .val input, .field.field-block .val textarea { width: 100%; }
 
 /* 按钮 */
 .btn {

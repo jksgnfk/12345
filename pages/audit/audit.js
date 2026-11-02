@@ -78,6 +78,17 @@ Page({
       success: (r) => { if (r.confirm) { store.clearAll(); wx.showToast({ title: '已清空', icon: 'none' }); this.load(); } }
     });
   },
+  cleanupExpired() {
+    wx.showLoading({ title: '清理中…', mask: true });
+    store.cleanupExpired().then((n) => {
+      wx.hideLoading();
+      this.load();
+      wx.showToast({ title: n > 0 ? ('已清理 ' + n + ' 条') : '无过期记录', icon: 'none' });
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '清理失败', icon: 'none' });
+    });
+  },
   logoutRole() {
     store.clearAuditRole();
     store.clearAuditKey();

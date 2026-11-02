@@ -47,6 +47,7 @@
         <button class="btn btn-line" bindtap="exportData">导出备份</button>
         <button class="btn btn-line" bindtap="importData">导入恢复</button>
       </view>
+      <button class="btn btn-line mt8" bindtap="cleanupExpired">清理过期记录（已完成超30天）</button>
       <button class="btn btn-danger mt8" bindtap="clearAll">清空全部记录</button>
     </view>
     <view wx:else class="card mt12 t2">当前权限：标准审核（天选打工人）。数据管理需最高管理员密钥（社畜）。</view>

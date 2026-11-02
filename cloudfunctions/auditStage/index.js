@@ -34,8 +34,37 @@ function applyToggle(r, v) {
   else { r.stage = v; r.rejected = false; r.rejectReason = ''; r.rejectAt = 0; r.rejectBy = ''; }
 }
 
+/* 自动清理：审核完毕（stage>=4）且超过 30 天未变动的记录，连同其云存储文件一并删除 */
+async function doCleanup() {
+  const _ = db.command;
+  const THIRTY_DAYS = 30 * 24 * 3600 * 1000;
+  const cutoff = Date.now() - THIRTY_DAYS;
+  let deleted = 0, files = 0, hasMore = true;
+  while (hasMore) {
+    const res = await db.collection('records')
+      .where({ stage: 4, updatedAt: _.lt(cutoff) })
+      .limit(100).get().catch(() => ({ data: [] }));
+    const list = res.data || [];
+    if (!list.length) break;
+    for (const r of list) {
+      const fids = collectFileIDs(r);
+      if (fids.length) { files += fids.length; await cloud.deleteFile({ fileList: fids }).catch(() => {}); }
+      await db.collection('records').doc(r._id).remove().catch(() => {});
+      deleted++;
+    }
+    if (list.length < 100) hasMore = false;
+  }
+  return { ok: true, deleted, files };
+}
+
 exports.main = async (event) => {
   const { id, action, v, key } = event || {};
+  // 清理任务：允许由客户端主动触发，或由定时触发器（无密钥）每日自动执行
+  const isTimer = !!(event && (event.Type === 'timer' || event.triggerName || event.triggerSource));
+  if (action === 'cleanup' || isTimer) {
+    try { return await doCleanup(); }
+    catch (e) { return { ok: false, msg: '清理失败: ' + (e && e.message ? e.message : e) }; }
+  }
   const role = roleOf(key);
   if (!role) return { ok: false, msg: '密钥错误' };
 

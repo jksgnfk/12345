@@ -49,8 +49,8 @@
 
       <view class="fld">
         <view class="fld-lab">标题</view>
-        <input class="fld-in" value="{{formTitle}}" maxlength="40" placeholder="请输入公告标题"
-               bindinput="onTitle" />
+        <textarea class="fld-ta fld-ta-sm" value="{{formTitle}}" maxlength="40" placeholder="请输入公告标题"
+                  bindinput="onTitle" auto-height />
       </view>
 
       <view class="fld">

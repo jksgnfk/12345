@@ -99,21 +99,48 @@ Page({
       .then((zipPath) => {
         wx.hideLoading();
         if (!zipPath) { wx.showToast({ title: '该单据暂无材料', icon: 'none' }); return; }
-        if (typeof wx.saveFileToDisk === 'function') {
+        this._afterExport(zipPath);
+      })
+      .catch(() => { wx.hideLoading(); wx.showToast({ title: '导出失败', icon: 'none' }); });
+  },
+  /* 导出完成后：提供「转发到微信」与「保存到电脑」两种去向 */
+  _afterExport(zipPath) {
+    const fileName = (zipPath.split('/').pop() || '报销材料.zip');
+    const canShare = typeof wx.shareFileMessage === 'function';
+    const canSave = typeof wx.saveFileToDisk === 'function';
+    const items = [];
+    if (canShare) items.push('转发到微信（好友 / 群）');
+    if (canSave) items.push('保存到电脑');
+    if (items.length === 0) {
+      wx.showModal({
+        title: '导出完成',
+        content: '已打包为 zip：\n' + zipPath + '\n\n当前端暂不支持直接转发或保存到本地，请在电脑版微信中打开本小程序后操作。',
+        showCancel: false
+      });
+      return;
+    }
+    wx.showActionSheet({
+      itemList: items,
+      success: (res) => {
+        const choice = items[res.tapIndex];
+        if (choice === '转发到微信（好友 / 群）') {
+          wx.shareFileMessage({
+            filePath: zipPath,
+            fileName,
+            success: () => wx.showToast({ title: '已调起转发', icon: 'none' }),
+            fail: (e) => {
+              // 用户取消或环境不支持：降级为保存路径提示
+              wx.showModal({ title: '转发未成功', content: '压缩包已生成：\n' + zipPath + '\n\n可改选「保存到电脑」导出。', showCancel: false });
+            }
+          });
+        } else {
           wx.saveFileToDisk({
             filePath: zipPath,
             success: () => wx.showToast({ title: '已导出，请解压查看', icon: 'none' }),
             fail: () => wx.showModal({ title: '导出完成', content: '压缩包已生成：\n' + zipPath, showCancel: false })
           });
-        } else {
-          // 移动端不支持保存到磁盘：给出路径并提示在电脑版微信操作
-          wx.showModal({
-            title: '导出完成',
-            content: '已打包为 zip：\n' + zipPath + '\n\n当前端不支持直接保存到本地，请在电脑版微信中打开本小程序后导出。',
-            showCancel: false
-          });
         }
-      })
-      .catch(() => { wx.hideLoading(); wx.showToast({ title: '导出失败', icon: 'none' }); });
+      }
+    });
   }
 });

@@ -10,7 +10,9 @@ App({
     }
     // 预热本地目录（本地兜底模式使用）；并异步拉取云端/本地记录到缓存
     store.ensureDir();
-    store.init();
+    store.init()
+      .then(() => store.cleanupExpired().catch(() => {}))
+      .catch(() => {});
   },
   globalData: {
     version: '2.5',
