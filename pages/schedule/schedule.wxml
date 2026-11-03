@@ -26,7 +26,7 @@
   <block wx:if="{{tab==='todo'}}">
     <view class="card">
       <view class="card-title"><view class="ttbar"></view>添加任务<text class="en">NEW</text></view>
-      <textarea class="pf pf-ta" placeholder="任务内容…" value="{{newText}}" bindinput="onNewText" auto-height></textarea>
+      <textarea class="pf pf-ta" placeholder="任务内容…" value="{{newText}}" bindinput="onNewText" auto-height cursor-spacing="24"></textarea>
       <view class="row2 mt8">
         <picker class="grow" mode="selector" range="{{prioOptions}}" range-key="label" value="{{prioIndex}}" bindchange="onPrioChange">
           <view class="pf sel">优先级：{{prioOptions[prioIndex].label}}</view>
@@ -155,7 +155,7 @@
     </view>
     <view class="card">
       <view class="card-title"><view class="ttbar blue"></view>新增/编辑模板</view>
-      <textarea class="pf pf-ta" placeholder="模板内容…" value="{{wText}}" bindinput="onWText" auto-height></textarea>
+      <textarea class="pf pf-ta" placeholder="模板内容…" value="{{wText}}" bindinput="onWText" auto-height cursor-spacing="24"></textarea>
       <view class="day-pick mt8">
         <view wx:for="{{dayNames}}" wx:key="*this" class="day-chip {{wDays[index]?'on':''}} {{index>=5?'we':''}}" bindtap="toggleWDay" data-day="{{index}}">{{item}}</view>
       </view>
@@ -220,7 +220,7 @@
         </view>
       </view>
       <view class="row2 mt8">
-        <textarea class="pf pf-ta grow" placeholder="待办内容…" value="{{pTodo}}" bindinput="onPTodoText" auto-height></textarea>
+        <textarea class="pf pf-ta grow" placeholder="待办内容…" value="{{pTodo}}" bindinput="onPTodoText" auto-height cursor-spacing="24"></textarea>
         <view class="btn btn-ghost" bindtap="addPTodo">加</view>
       </view>
     </view>
@@ -236,7 +236,7 @@
         <text class="mini-act del" bindtap="delPStep" data-idx="{{index}}">删</text>
       </view>
       <view class="row2 mt8">
-        <textarea class="pf pf-ta grow" placeholder="流程步骤…" value="{{pStep}}" bindinput="onPStepText" auto-height></textarea>
+        <textarea class="pf pf-ta grow" placeholder="流程步骤…" value="{{pStep}}" bindinput="onPStepText" auto-height cursor-spacing="24"></textarea>
         <view class="btn btn-ghost" bindtap="addPStep">加</view>
       </view>
       <view class="btn-row"><view class="btn btn-line" bindtap="exportProject">导出项目备忘</view><view class="btn btn-danger" bindtap="delProject">删除项目</view></view>

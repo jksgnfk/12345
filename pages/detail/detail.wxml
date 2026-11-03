@@ -68,7 +68,7 @@
   <view class="sheet" catchtap="noop">
     <view class="sheet-title">退回修改 · 请填写原因</view>
     <view class="hint">退回后提交人可见此留言，请写明退回原因。</view>
-    <textarea class="rej-area" placeholder="请输入退回原因（必填）" placeholder-class="rej-ph" value="{{rejectText}}" bindinput="onRejectInput" maxlength="200" auto-height auto-focus/>
+    <textarea class="rej-area" placeholder="请输入退回原因（必填）" placeholder-class="rej-ph" value="{{rejectText}}" bindinput="onRejectInput" maxlength="200" auto-height cursor-spacing="24" auto-focus/>
     <view class="sheet-tip" wx:if="{{!rejectText}}">未填写原因将无法退回</view>
     <view class="btn-row">
       <button class="btn btn-line" bindtap="cancelReject">取消</button>

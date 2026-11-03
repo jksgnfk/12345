@@ -22,14 +22,16 @@ page {
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 view, text, input, textarea, scroll-view, button { box-sizing: border-box; }
 
 /* 容器 */
-.wrap { padding: 14px 14px calc(28px + env(safe-area-inset-bottom)); }
+.wrap { padding: 16px 16px calc(32px + env(safe-area-inset-bottom)); max-width: 720px; margin-left: auto; margin-right: auto; }
 .mt8 { margin-top: 8px; }
 .mt12 { margin-top: 12px; }
 .mt16 { margin-top: 16px; }
@@ -38,16 +40,16 @@ view, text, input, textarea, scroll-view, button { box-sizing: border-box; }
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px;
-  margin-bottom: 12px;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
   position: relative;
   box-shadow: 0 2px 10px rgba(31, 170, 107, 0.05);
 }
 .card.blue { border-color: #d4e6f7; box-shadow: 0 2px 10px rgba(74, 144, 217, 0.06); }
 .card-title {
   display: flex; align-items: center; gap: 8px;
-  font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: .3px;
+  font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: .3px;
   margin-bottom: 12px;
 }
 .ttbar { width: 3px; height: 14px; background: var(--cyan); border-radius: 2px; box-shadow: 0 0 8px var(--cyan); }
@@ -60,23 +62,23 @@ view, text, input, textarea, scroll-view, button { box-sizing: border-box; }
 .en { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--text3); letter-spacing: 1px; }
 
 /* 表单字段 */
-.field { display: flex; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid #eef6f1; }
+.field { display: flex; align-items: flex-start; padding: 14px 0; border-bottom: 1px solid #eef6f1; }
 .field:last-child { border-bottom: none; }
-.field > label { width: 86px; flex: none; color: var(--text2); font-size: 13px; padding-top: 3px; }
+.field > label { width: 96px; flex: none; color: var(--text2); font-size: 14px; padding-top: 6px; }
 .field > label.req::before { content: "*"; color: var(--red); margin-right: 3px; }
 .field .val { flex: 1; }
 .field.field-nb { border-bottom: none; padding-bottom: 4px; }
 .field.field-switch .val { display: flex; align-items: center; justify-content: flex-end; }
 input.pf, textarea.pf, picker.pf {
-  width: 100%; border: 1px solid var(--line); border-radius: 9px;
-  padding: 9px 10px; font-size: 14px; line-height: 1.5; color: var(--text); background: var(--panel2);
+  width: 100%; border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; font-size: 16px; line-height: 1.5; color: var(--text); background: var(--panel2);
   vertical-align: middle;
 }
-textarea.pf { min-height: 64px; }
+textarea.pf { min-height: 80px; }
 /* 多行输入框：启用自适应高度后完整显示全部文字，避免被截断 */
 textarea.pf[auto-height], .pf-auto { height: auto; }
 /* 紧凑型多行输入：用于原本是单行、但内容可能较长的字段（备注/任务/步骤等） */
-textarea.pf.pf-ta { min-height: 42px; max-height: 200px; line-height: 1.5; padding: 9px 10px; }
+textarea.pf.pf-ta { min-height: 48px; max-height: 240px; line-height: 1.5; padding: 12px 14px; }
 /* 标签宽度自适应：长文本字段(如备注)标签单独占行，输入区独占一行，避免挤压换行截断 */
 .field.field-block { display: block; }
 .field.field-block > label { display: block; width: auto; padding: 0 0 6px; }
@@ -85,7 +87,7 @@ textarea.pf.pf-ta { min-height: 42px; max-height: 200px; line-height: 1.5; paddi
 /* 按钮 */
 .btn {
   display: flex; align-items: center; justify-content: center;
-  border-radius: 11px; padding: 13px; font-size: 15px; font-weight: 600;
+  border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 600;
   border: none; line-height: 1;
 }
 .btn::after { border: none; }
@@ -101,6 +103,8 @@ textarea.pf.pf-ta { min-height: 42px; max-height: 200px; line-height: 1.5; paddi
 /* 交互反馈（按压态） */
 .btn, .ent, .ent-final, .tab { transition: transform .08s ease, box-shadow .15s ease; }
 .btn:active, .ent:active, .ent-final:active, .tab:active { transform: scale(.98); }
+.btn:hover { filter: brightness(1.04); }
+.rec-item:hover { background: var(--cyan-l); }
 
 /* 徽章 */
 .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
@@ -190,7 +194,7 @@ textarea.pf.pf-ta { min-height: 42px; max-height: 200px; line-height: 1.5; paddi
 .sheet { width: 100%; background: var(--bg); border-radius: 16px 16px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); box-sizing: border-box; }
 .sheet-title { font-size: 16px; font-weight: 700; color: var(--text); }
 .sheet .hint { font-size: 12px; color: var(--text3); margin: 6px 0 10px; }
-.rej-area { width: 100%; box-sizing: border-box; min-height: 96px; background: #f4f8f6; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--text); line-height: 1.5; }
+.rej-area { width: 100%; box-sizing: border-box; min-height: 112px; background: #f4f8f6; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 16px; color: var(--text); line-height: 1.5; }
 .rej-ph { color: var(--text3); }
 .sheet-tip { font-size: 11px; color: var(--amber); margin-top: 6px; }
 

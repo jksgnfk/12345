@@ -28,4 +28,5 @@
   </view>
 
   <view class="t3" style="text-align:center;">报销资料提交系统 · 提交端 / 审核端 / 进度查询</view>
+  <view class="privacy-tip" bindtap="openPrivacy">登录即表示同意《隐私协议》</view>
 </view>

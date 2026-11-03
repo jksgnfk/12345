@@ -22,9 +22,9 @@
       <label>含服装采购</label>
       <view class="val"><switch checked="{{clothing}}" bindchange="onClothing" color="#1faa6b"/></view>
     </view>
-    <view class="field field-block"><label class="req">报销事由</label><view class="val"><textarea class="pf" value="{{reason}}" bindinput="onReason" placeholder="如：迎新活动物资采购" auto-height maxlength="200"/></view></view>
-    <view class="field"><label class="req">报销总额</label><view class="val"><input class="pf" type="digit" value="{{total}}" bindinput="onTotal" placeholder="¥0.00"/></view></view>
-    <view class="field field-block"><label>备注</label><view class="val"><textarea class="pf pf-ta" value="{{note}}" bindinput="onNote" placeholder="选填，可填写补充说明" auto-height/></view></view>
+    <view class="field field-block"><label class="req">报销事由</label><view class="val"><textarea class="pf" value="{{reason}}" bindinput="onReason" placeholder="如：迎新活动物资采购" auto-height maxlength="200" cursor-spacing="24"/></view></view>
+    <view class="field"><label class="req">报销总额</label><view class="val"><input class="pf" type="digit" value="{{total}}" bindinput="onTotal" placeholder="¥0.00" cursor-spacing="24" confirm-type="done"/></view></view>
+    <view class="field field-block"><label>备注</label><view class="val"><textarea class="pf pf-ta" value="{{note}}" bindinput="onNote" placeholder="选填，可填写补充说明" auto-height cursor-spacing="24"/></view></view>
   </view>
 
   <!-- 材料 -->

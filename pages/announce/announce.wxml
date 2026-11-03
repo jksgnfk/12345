@@ -50,13 +50,13 @@
       <view class="fld">
         <view class="fld-lab">标题</view>
         <textarea class="fld-ta fld-ta-sm" value="{{formTitle}}" maxlength="40" placeholder="请输入公告标题"
-                  bindinput="onTitle" auto-height />
+                  bindinput="onTitle" auto-height cursor-spacing="24" />
       </view>
 
       <view class="fld">
         <view class="fld-lab">内容</view>
         <textarea class="fld-ta" value="{{formContent}}" maxlength="1000" placeholder="请输入公告内容（选填）"
-                  bindinput="onContent" auto-height />
+                  bindinput="onContent" auto-height cursor-spacing="24" />
       </view>
 
       <view class="fld row">
