@@ -44,13 +44,6 @@
   </view>
 
   <view class="grid mt12">
-    <view class="ent s" style="grid-column:1 / -1;" bindtap="goSchedule">
-      <view class="ent-ic">📅</view><view class="ent-t">日程待办</view>
-      <view class="ent-d mono">SCHEDULE · 任务 / 日历 / 周常 / 项目</view>
-    </view>
-  </view>
-
-  <view class="grid mt12">
     <view class="ent c" style="grid-column:1 / -1;" bindtap="goAnnounce">
       <view class="ent-ic">📢</view><view class="ent-t">公告栏<text wx:if="{{announceUnread > 0}}" class="ent-badge">{{announceUnread}}</text></view>
       <view class="ent-d mono">NOTICE · 全员公告（最高管理可发布）</view>

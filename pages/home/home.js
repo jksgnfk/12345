@@ -13,7 +13,6 @@ Page({
     });
   },
   goSubmit() { wx.navigateTo({ url: '/pages/submit/submit' }); },
-  goSchedule() { wx.navigateTo({ url: '/pages/schedule/schedule' }); },
   goAnnounce() { wx.navigateTo({ url: '/pages/announce/announce' }); },
   goTrack() { wx.navigateTo({ url: '/pages/track/track' }); },
   goHistory() { wx.navigateTo({ url: '/pages/history/history' }); },

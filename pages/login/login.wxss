@@ -12,5 +12,9 @@
 .login-card { margin-top: 4px; }
 .login-card .field:last-child { border-bottom: none; }
 
-.privacy-tip { margin-top: 18px; text-align: center; font-size: 12px; color: var(--cyan); opacity: .85; }
-.privacy-tip:active { opacity: .6; }
+.agree-row { display: flex; align-items: center; justify-content: center; margin-top: 18px; gap: 8px; flex-wrap: wrap; }
+.agree-box { width: 18px; height: 18px; border: 1.5px solid var(--cyan); border-radius: 5px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; line-height: 1; flex: none; box-sizing: border-box; }
+.agree-box.on { background: var(--cyan); }
+.agree-txt { font-size: 13px; color: var(--text2); }
+.agree-link { color: var(--cyan); }
+.agree-link:active { opacity: .6; }

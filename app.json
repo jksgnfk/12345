@@ -7,7 +7,6 @@
     "pages/audit/audit",
     "pages/history/history",
     "pages/detail/detail",
-    "pages/schedule/schedule",
     "pages/announce/announce"
   ],
   "window": {
