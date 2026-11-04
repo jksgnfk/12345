@@ -108,7 +108,7 @@ Page({
         };
         if (res.tapIndex === 0) {
           wx.chooseMedia({
-            count: Math.min(multiple ? MAX_FILES : 1, remain), mediaType: ['image'], sourceType: ['album', 'camera'],
+            count: Math.min(multiple ? MAX_FILES : 1, remain), mediaType: ['image'], sourceType: ['album'],
             success: (r) => {
               const tasks = r.tempFiles.map(tf =>
                 store.uploadFile(tf.tempFilePath, 'img.jpg')
