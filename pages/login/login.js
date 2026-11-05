@@ -36,7 +36,8 @@ Page({
         academy: (this.data.user.academy || '').trim(),
         dept: (this.data.user.dept || '').trim()
       });
-      wx.reLaunch({ url: '/pages/home/home' });
+      // 登录成功返回上一页（通常是首页，或被拦截进入的功能页），不再强制落到首页
+      wx.navigateBack({ delta: 1, fail: () => wx.reLaunch({ url: '/pages/home/home' }) });
     });
   },
   /* 登录页底部《隐私协议》入口 */

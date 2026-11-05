@@ -10,10 +10,16 @@
   </view>
 
   <view class="user-line t2">
-    当前用户：<text class="u-name">{{user.username}}</text>
-    <text class="mono" wx:if="{{user.academy}}"> · {{user.academy}}</text>
-    <text wx:if="{{user.dept}}"> · {{user.dept}}</text>
-    <text class="logout" bindtap="logout">退出</text>
+    <block wx:if="{{isGuest}}">
+      <text class="u-name">游客模式</text>
+      <text class="logout" bindtap="goLogin">登录 / 身份登记</text>
+    </block>
+    <block wx:else>
+      当前用户：<text class="u-name">{{user.username}}</text>
+      <text class="mono" wx:if="{{user.academy}}"> · {{user.academy}}</text>
+      <text wx:if="{{user.dept}}"> · {{user.dept}}</text>
+      <text class="logout" bindtap="logout">退出</text>
+    </block>
   </view>
 
   <view class="grid">
@@ -58,7 +64,7 @@
       <view>· 进度查询：免密钥，查看本人提交单据的处理进度。</view>
       <view>· 最终权限：最高管理员密钥进入，检索全部历史报销记录（含搜索）。</view>
       <view>· 审核端：输入密钥进入，勾选处理进程（审核中 → 老师已签字 → 计财处 → 已完成）。</view>
-      <view>· 日程待办：个人任务管理，含待办、月历、周视图、周常任务、项目备忘与提醒（本地存储）。</view>
+      <view>· 材料导出：审核端进入单据详情，可一键将该单据的全部图片 / 文件打包为 zip，转发或保存到电脑。</view>
       <view>· 公告栏：全员可读；仅最高管理可发布、修改、删除；有未读公告时入口显示红点提醒。</view>
     </view>
   </view>
