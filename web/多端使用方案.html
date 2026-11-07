@@ -98,6 +98,7 @@ th{background:var(--panel2);font-weight:600;color:var(--text2);white-space:nowra
     <a href="#s0">0 · 现状与目标</a><a href="#s1">1 · 能力矩阵</a><a href="#s2">2 · 分阶段路线</a>
     <a href="#s3">3 · L1 架构与接口</a><a href="#s4">4 · 云函数骨架</a><a href="#s5">5 · 跨端适配清单</a>
     <a href="#s6">6 · 合规与风险</a><a href="#s7">7 · 落地顺序</a><a href="#s8">8 · 工作量表</a>
+    <a href="#s9">9 · 本次新增能力</a>
   </nav>
 
   <section id="s0">
@@ -386,6 +387,15 @@ exports.main = async (event) =&gt; {
       <tr><td>L3</td><td>角色权限、会话、审计日志</td><td>L1 + 权限模型设计</td><td>网关鉴权 + <code>audit_log</code> 集合 + 前端角色态</td></tr>
     </table></div>
     <p><b>共享字段口径（务必保持一致）：</b><code>STAGES</code> 已提交 / 审核中 / 老师已签字 / 提交至计财处 / 项目已完成；<code>MATNAME</code> 发票、策划案（附预算表）、支付截图、商品购买截图、材料证明截图、领用清单、其他（备用）；<code>MAX_FILES=50</code>；审核完毕 30 天自动清理。</p>
+  </section>
+
+  <section id="s9">
+    <h2><span class="no">9</span> 本次新增：最高管理删除项目 &amp; 默认下载到桌面</h2>
+    <div class="tw"><table>
+      <tr><th>能力</th><th>实现方式</th><th>约束</th></tr>
+      <tr><td>最高管理删除项目</td><td>「数据管理 → 项目管理 · 最高权限删除」：输入最高管理密钥解锁后，可单条或批量删除单据及其全部材料；详情抽屉的「删除单据」也仅对最高管理可见。删除经 <code>saveState()</code> 自动生成墓碑，其它设备打开同一链接时一并移除。</td><td>审核员仍可退回 / 推进 / 导出，不能删除；操作前二次确认，不可恢复。</td></tr>
+      <tr><td>默认下载到桌面</td><td>导出 ZIP、JSON 备份、完整快照与材料原文件统一走 <code>download()</code>；首次导出在用户点击手势内调用 <code>showDirectoryPicker({startIn:'desktop'})</code>，目录句柄存入 IndexedDB，之后直接写入该文件夹。</td><td>浏览器不允许网页静默改写系统默认下载目录，需授权一次；不支持的浏览器自动降级为浏览器默认下载，并提示在「设置 → 下载内容 → 位置」改为桌面。</td></tr>
+    </table></div>
   </section>
 
   <div class="ft">

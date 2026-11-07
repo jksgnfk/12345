@@ -149,6 +149,16 @@ textarea.fin{min-height:84px;resize:vertical}
 .dcard .row{display:flex;gap:8px;flex-wrap:wrap}
 .dcard .inp{width:100%;margin-bottom:8px}
 .sync-status{font-size:13px;color:var(--text2);margin-top:10px;word-break:break-all}
+/* 下载位置 / 最高管理删除 */
+.dl-status{font-size:13px;color:var(--text2);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin:0 0 10px;line-height:1.6}
+.admin-rec-list{margin-top:10px;max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:12px}
+.admin-rec{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.admin-rec:last-child{border-bottom:none}
+.admin-rec .ar-chk{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.admin-rec .ar-main{flex:1;min-width:180px;font-size:13px;line-height:1.6;word-break:break-all}
+.admin-rec .ar-sub{color:var(--text3);font-size:12px;word-break:break-all}
+.admin-rec .btn{flex:none}
+@media(max-width:760px){.grid-cards{grid-template-columns:1fr}.dcard[style*="grid-column"]{grid-column:auto!important}}
 /* 公告 */
 .ann-item{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;background:var(--panel2)}
 .ann-item.unread{border-color:var(--cyan);background:var(--cyan-l)}
@@ -464,6 +474,30 @@ textarea.fin{min-height:84px;resize:vertical}
           <button class="btn primary sm" data-act="syncPush">上传本地</button>
         </div>
         <div class="sync-status" id="syncStatus">在线部署时自动启用多端共享；否则为纯本地模式（可在下方另行配置网关）。</div>
+      </section>
+      <section class="dcard">
+        <h3>下载位置（默认桌面）</h3>
+        <p>导出 ZIP、JSON 备份、完整快照及材料原文件时，优先直接保存到桌面。浏览器要求首次授权一次目录（默认定位桌面），之后长期生效；不支持该能力的浏览器仍走浏览器默认下载。</p>
+        <div class="dl-status" id="dlDirStatus">正在检测下载位置…</div>
+        <div class="row">
+          <button class="btn primary sm" data-act="pickDesktop">设为桌面…</button>
+          <button class="btn ghost sm" data-act="resetDownload">恢复浏览器默认</button>
+        </div>
+      </section>
+      <section class="dcard" style="grid-column:1/-1">
+        <h3>项目管理 · 最高权限删除</h3>
+        <p>仅「最高管理」可删除项目（单据）及其全部材料；删除会生成墓碑，其它设备打开同一链接时也会移除。审核员仍可退回、推进流程与导出，不能删除项目。</p>
+        <div class="row" id="adminUnlockRow">
+          <input class="inp" id="dataAdminKey" type="text" autocomplete="off" inputmode="text" placeholder="输入最高管理密钥以解锁删除权限" style="flex:1;min-width:220px;width:auto;margin-bottom:0">
+          <button class="btn ghost sm" data-act="toggleSecret" data-for="dataAdminKey">隐藏</button>
+          <button class="btn primary sm" data-act="unlockDataAdmin">解锁最高管理</button>
+          <button class="btn ghost sm" data-act="dataRoleLogout">退出角色</button>
+        </div>
+        <div class="sync-status" id="dataAdminStatus">—</div>
+        <div id="adminRecList" class="admin-rec-list"></div>
+        <div class="row" id="adminRecOps" hidden style="margin-top:10px">
+          <button class="btn danger sm" data-act="deleteAdminSelected">删除选中项目</button>
+        </div>
       </section>
     </div>
     <section class="panel panel-pad" style="margin-top:14px">

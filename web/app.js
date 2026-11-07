@@ -148,12 +148,157 @@
     var t = $('toast'); t.textContent = msg; t.hidden = false;
     clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 3200);
   }
-  function download(bytes, filename, mime) {
+  /* ---------- 下载位置：默认桌面（File System Access API） ----------
+   * 浏览器不允许网页静默改写系统默认下载目录，因此首次导出时在用户点击的手势内
+   * 弹出目录选择（startIn:'desktop' 默认定位桌面），授权后把句柄存入 IndexedDB，
+   * 之后所有导出 / 下载直接写入该文件夹；不支持或拒绝授权时降级为浏览器默认下载。 */
+  var DIR_PREF_DB = 'cy_web_prefs', DIR_PREF_KEY = 'downloadDir';
+  var dirHandle = null, dirPromise = null, dirDeclined = false, _prefDB = null;
+  function fsDirSupported() {
+    return typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function'
+      && (window.isSecureContext || /^https:$/.test(location.protocol));
+  }
+  function openPrefDB() {
+    return new Promise(function (resolve) {
+      if (_prefDB) return resolve(_prefDB);
+      if (!('indexedDB' in window)) return resolve(null);
+      var req;
+      try { req = indexedDB.open(DIR_PREF_DB, 1); } catch (e) { return resolve(null); }
+      req.onupgradeneeded = function () {
+        var d = req.result;
+        if (!d.objectStoreNames.contains('prefs')) d.createObjectStore('prefs');
+      };
+      req.onsuccess = function () { _prefDB = req.result; resolve(_prefDB); };
+      req.onerror = function () { resolve(null); };
+      setTimeout(function () { if (!_prefDB) resolve(null); }, 1500);
+    });
+  }
+  function getPref(key) {
+    return openPrefDB().then(function (db) {
+      if (!db) return null;
+      return new Promise(function (resolve) {
+        try {
+          var r = db.transaction('prefs', 'readonly').objectStore('prefs').get(key);
+          r.onsuccess = function () { resolve(r.result || null); };
+          r.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+      });
+    });
+  }
+  function setPref(key, val) {
+    return openPrefDB().then(function (db) {
+      if (!db) return;
+      return new Promise(function (resolve) {
+        try {
+          var tx = db.transaction('prefs', 'readwrite');
+          tx.objectStore('prefs').put(val, key);
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = function () { resolve(); };
+        } catch (e) { resolve(); }
+      });
+    });
+  }
+  function dirPermission(h, request) {
+    if (!h || typeof h.queryPermission !== 'function') return Promise.resolve(true);
+    var opt = { mode: 'readwrite' };
+    return Promise.resolve(h.queryPermission(opt)).then(function (p) {
+      if (p === 'granted') return true;
+      if (!request || typeof h.requestPermission !== 'function') return false;
+      return Promise.resolve(h.requestPermission(opt)).then(function (q) { return q === 'granted'; });
+    }).catch(function () { return false; });
+  }
+  function renderDownloadStatus() {
+    var box = $('dlDirStatus'); if (!box) return;
+    if (!fsDirSupported()) {
+      box.textContent = '当前浏览器不支持指定下载目录：导出仍使用浏览器默认下载位置。可在浏览器「设置 → 下载内容 → 位置」中改为桌面。';
+      return;
+    }
+    box.textContent = dirHandle
+      ? '已设为「' + (dirHandle.name || '自定义目录') + '」：所有导出与下载将直接保存到该文件夹（已授权，长期生效）。'
+      : '尚未授权目录：首次导出时会弹出文件夹选择（默认定位到桌面），选择一次后所有下载都直接保存到桌面。';
+  }
+  function loadDownloadDir() {
+    if (!fsDirSupported()) { renderDownloadStatus(); return Promise.resolve(); }
+    return getPref(DIR_PREF_KEY).then(function (h) {
+      if (!h) { renderDownloadStatus(); return; }
+      return dirPermission(h, false).then(function (ok) {
+        dirHandle = ok ? h : null;
+        renderDownloadStatus();
+      });
+    }).catch(function () { renderDownloadStatus(); });
+  }
+  function pickDesktopDir(silent) {
+    if (!fsDirSupported()) {
+      if (!silent) toast('当前浏览器不支持自定义下载目录');
+      renderDownloadStatus(); return Promise.resolve(null);
+    }
+    var p;
+    try { p = window.showDirectoryPicker({ id: 'cyDesktop', mode: 'readwrite', startIn: 'desktop' }); }
+    catch (e) {
+      try { p = window.showDirectoryPicker({ id: 'cyDesktop', mode: 'readwrite' }); }
+      catch (e2) { p = Promise.reject(e2); }
+    }
+    return Promise.resolve(p).then(function (h) {
+      return dirPermission(h, true).then(function (ok) {
+        if (!ok) { if (!silent) toast('未获得目录写入权限'); return null; }
+        dirHandle = h; dirDeclined = false;
+        return setPref(DIR_PREF_KEY, h).then(function () {
+          renderDownloadStatus();
+          if (!silent) toast('已设为「' + (h.name || '自定义目录') + '」，之后下载直接保存到该文件夹');
+          return h;
+        });
+      });
+    }).catch(function () {
+      if (!silent) toast('已取消，仍使用浏览器默认下载位置');
+      return null;
+    });
+  }
+  /* 必须在用户点击「导出 / 下载」的手势内调用；download() 会等这个 Promise 完成再写文件 */
+  function prepareDownloadDir() {
+    if (dirDeclined || dirPromise || !fsDirSupported()) return;
+    if (dirHandle) {
+      dirPromise = dirPermission(dirHandle, true).then(function (ok) {
+        if (!ok) { dirHandle = null; renderDownloadStatus(); return null; }
+        return dirHandle;
+      });
+      return;
+    }
+    dirPromise = pickDesktopDir(true).then(function (h) {
+      if (!h) dirDeclined = true;   // 本会话不再重复弹窗
+      return h;
+    });
+  }
+  function writeToDesktop(h, bytes, name, mime) {
+    return h.getFileHandle(name, { create: true }).then(function (fh) {
+      return fh.createWritable();
+    }).then(function (w) {
+      return w.write(new Blob([bytes], { type: mime || 'application/zip' })).then(function () { return w.close(); });
+    }).then(function () { return true; });
+  }
+  function fallbackDownload(bytes, name, mime) {
     var blob = new Blob([bytes], { type: mime || 'application/zip' });
     var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href = url; a.download = filename;
+    var a = document.createElement('a'); a.href = url; a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+  }
+  function download(bytes, filename, mime) {
+    var name = sanitize(filename || 'download.zip');
+    Promise.resolve(dirPromise || Promise.resolve(dirHandle)).then(function (h) {
+      if (!h) return null;
+      return dirPermission(h, false).then(function (ok) {
+        if (!ok) return null;
+        return writeToDesktop(h, bytes, name, mime);
+      }).catch(function () { return null; });
+    }).then(function (done) {
+      if (done) { toast('已保存到' + (dirHandle && dirHandle.name ? '「' + dirHandle.name + '」' : '桌面') + '：' + name); return; }
+      fallbackDownload(bytes, name, mime);
+    }).catch(function () { fallbackDownload(bytes, name, mime); });
+  }
+  function resetDownloadDir() {
+    dirHandle = null; dirPromise = null; dirDeclined = true;
+    setPref(DIR_PREF_KEY, null);
+    renderDownloadStatus(); toast('已恢复为浏览器默认下载位置');
   }
 
   /* ---------- 文件仓库：IndexedDB（不可用则降级内存） ---------- */
@@ -617,7 +762,66 @@
       : '存储：localStorage（元数据）+ IndexedDB（文件本体）· 数据不会自动上传任何服务器。';
     $('storeInfo').innerHTML = '单据 ' + state.records.length + ' 条 · 公告 ' + state.announcements.length +
       ' 条 · 材料 ' + files + ' 份（约 ' + (size / 1024 / 1024).toFixed(2) + ' MB）<br>' + storeLine;
+    renderAdminRecords();
   }
+
+  /* ---------- 最高管理：删除项目（单据 + 材料 + 跨设备墓碑） ---------- */
+  var adminSelected = new Set();
+  function unlockDataAdmin() {
+    var key = (($('dataAdminKey').value) || '').trim();
+    if (key !== ADMIN_KEY) { toast('密钥错误，仅最高管理可删除项目'); return; }
+    state.role = 'admin'; $('dataAdminKey').value = '';
+    saveState(); renderAll(); toast('已解锁最高管理：可删除项目');
+  }
+  function dataRoleLogout() { state.role = null; saveState(); renderAll(); toast('已退出最高管理'); }
+  function renderAdminRecords() {
+    var box = $('adminRecList'), st = $('dataAdminStatus'), ops = $('adminRecOps'), row = $('adminUnlockRow');
+    if (!box) return;
+    if (!isAdmin()) {
+      st.textContent = '当前角色：' + (state.role === 'audit' ? '审核员' : '普通用户') + ' · 删除项目需最高管理密钥。';
+      box.innerHTML = '<div class="empty" style="padding:18px">解锁后可在下方查看并删除项目</div>';
+      ops.hidden = true; row.hidden = false; return;
+    }
+    row.hidden = true;
+    var ids = {}; state.records.forEach(function (r) { ids[r.id] = 1; });
+    Array.from(adminSelected).forEach(function (id) { if (!ids[id]) adminSelected.delete(id); });
+    st.textContent = '当前角色：最高管理 · 共 ' + state.records.length + ' 个项目，可单条或批量删除（不可恢复，会同步删除其它设备上的这些项目）。';
+    ops.hidden = !state.records.length || !adminSelected.size;
+    if (!state.records.length) { box.innerHTML = '<div class="empty" style="padding:18px">暂无项目</div>'; return; }
+    box.innerHTML = state.records.slice().sort(function (a, b) {
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    }).map(function (r) {
+      return '<div class="admin-rec"><label class="ar-chk"><input type="checkbox" class="adchck" data-id="' +
+        esc(r.id) + '"' + (adminSelected.has(r.id) ? ' checked' : '') + '> 选择</label>' +
+        '<div class="ar-main">' + esc(r.reason || '（未填写事由）') +
+        '<div class="ar-sub">' + esc(r.id) + ' · ' + esc(r.name || '—') + ' · ' + esc(fmtMoney(r.total)) +
+        ' · ' + esc(stageLabel(r)) + ' · ' + esc(fmtDate(r.createdAt)) + '</div></div>' +
+        '<button class="btn danger sm" data-act="deleteAdminRec" data-id="' + esc(r.id) + '">删除项目</button></div>';
+    }).join('');
+  }
+  function doDeleteRecords(list, label) {
+    if (!isAdmin()) { toast('仅最高管理可删除项目'); return; }
+    if (!list.length) { toast('请先选择要删除的项目'); return; }
+    confirmDialog('删除项目（最高管理）',
+      '确认永久删除 ' + list.length + ' 个项目及其全部材料？' + label +
+      ' 此操作不可恢复，且会同步删除其它设备上的这些项目。', function () {
+        Promise.all(list.map(releaseRecordFiles)).then(function () {
+          var ids = {}; list.forEach(function (r) { ids[r.id] = 1; });
+          state.records = state.records.filter(function (r) { return !ids[r.id]; });
+          list.forEach(function (r) { selected.delete(r.id); adminSelected.delete(r.id); });
+          if (currentId && ids[currentId]) closeDrawer();
+          saveState(); renderAll(); toast('已删除 ' + list.length + ' 个项目');
+        }).catch(function (e) { toast('删除失败：' + (e && e.message ? e.message : '未知错误')); });
+      });
+  }
+  function deleteAdminRec(id) {
+    var r = state.records.find(function (x) { return x.id === id; });
+    if (r) doDeleteRecords([r], '《' + (r.reason || r.id) + '》');
+  }
+  function deleteAdminSelected() {
+    doDeleteRecords(state.records.filter(function (r) { return adminSelected.has(r.id); }), '批量选中项目');
+  }
+
   function renderAll() {
     renderHeader(); renderWork(); renderSubmit(); renderTrack();
     renderHistory(); renderAudit(); renderAnnounce(); renderData(); renderBadges();
@@ -694,7 +898,7 @@
           return '<button class="btn ' + (Number(r.stage) === s.k && !r.rejected ? 'primary' : 'ghost') + ' sm" data-act="toggleStage" data-k="' + s.k + '">' + esc(s.name) + '</button>';
         }).join('') + '</div><h4>审核处理</h4><div class="stage-btns">' +
         '<button class="btn amber sm" data-act="rejectOpen">退回申请</button>' +
-        '<button class="btn danger sm" data-act="deleteRec">删除单据</button>' +
+        (isAdmin() ? '<button class="btn danger sm" data-act="deleteRec">删除单据</button>' : '') +
         '<button class="btn primary sm" data-act="exp1">一键导出</button></div>';
     } else { bar.hidden = true; bar.innerHTML = ''; }
     $('mask').hidden = false; $('drawer').hidden = false;
@@ -736,7 +940,6 @@
       var t = fileType(f, buf);
       var url = URL.createObjectURL(new Blob([buf], { type: t.mime }));
       thumbUrls.push(url);
-      var nm = sanitize((MATNAME[k] || k) + '-' + (f.name || '材料')) + '.' + t.ext;
       var title = (MATNAME[k] || k) + ' · ' + (f.name || '材料');
       var meta = '<p class="hint">' + esc(t.ext.toUpperCase() + ' · ' + t.mime) + ' · ' +
         Math.max(1, Math.round(buf.length / 1024)) + ' KB · 原始文件，未转码</p>';
@@ -756,10 +959,22 @@
       $('modalTitle').textContent = title;
       $('modalBody').innerHTML = body;
       $('modalFoot').innerHTML = '<button class="btn ghost sm" data-act="modalClose">关闭</button>' +
-        '<a class="btn primary sm" href="' + url + '" download="' + esc(nm) + '">下载原文件</a>';
+        '<button class="btn primary sm" data-act="downloadOrig" data-k="' + esc(k) + '" data-i="' + i + '">下载原文件</button>';
       $('modal').classList.add('wide');
       openModal();
     }).catch(function (e) { toast('读取材料失败：' + (e && e.message ? e.message : '未知错误')); });
+  }
+  function downloadOrig(k, i) {
+    var r = state.records.find(function (x) { return x.id === currentId; });
+    if (!r) { toast('请先打开一条单据'); return; }
+    var f = ((r.materials && r.materials[k]) || [])[i];
+    if (!f) return;
+    fileBuffer(f).then(function (buf) {
+      if (!buf) { toast('该材料暂无文件本体'); return; }
+      var t = fileType(f, buf);
+      var nm = sanitize((MATNAME[k] || k) + '-' + (f.name || '材料')) + '.' + t.ext;
+      download(buf, nm, t.mime);
+    }).catch(function (e) { toast('下载失败：' + (e && e.message ? e.message : '未知错误')); });
   }
   function closeDrawer() {
     $('mask').hidden = true; $('drawer').hidden = true;
@@ -969,6 +1184,7 @@
     toast('已退回该申请');
   }
   function deleteRec() {
+    if (!isAdmin()) { toast('仅最高管理可删除项目'); return; }
     var r = state.records.find(function (x) { return x.id === currentId; });
     if (!r) return;
     confirmDialog('删除单据', '确认删除《' + r.reason + '》及其全部材料？此操作不可恢复。', function () {
@@ -1614,6 +1830,8 @@
     }
     var act = el.dataset.act, id = el.dataset.id;
     try {
+      /* 下载类操作：在用户手势内准备桌面目录，download() 会等授权完成后再写文件 */
+      if (/^(exp1|exportSel|exportAll|exportJSON|exportSnap|downloadOrig)$/.test(act)) prepareDownloadDir();
       switch (act) {
         case 'tab': switchTab(el.dataset.tab); break;
         case 'theme': toggleTheme(); break;
@@ -1653,6 +1871,13 @@
         case 'rejectOpen': rejectOpen(); break;
         case 'rejectConfirm': rejectConfirm(); break;
         case 'deleteRec': deleteRec(); break;
+        case 'downloadOrig': downloadOrig(el.dataset.k, Number(el.dataset.i)); break;
+        case 'unlockDataAdmin': unlockDataAdmin(); break;
+        case 'dataRoleLogout': dataRoleLogout(); break;
+        case 'deleteAdminRec': deleteAdminRec(id); break;
+        case 'deleteAdminSelected': deleteAdminSelected(); break;
+        case 'pickDesktop': dirPromise = null; dirDeclined = false; pickDesktopDir(false); break;
+        case 'resetDownload': resetDownloadDir(); break;
         case 'annAdd': annEditor(''); break;
         case 'annEdit': annEditor(id); break;
         case 'annDel': annDel(id); break;
@@ -1681,6 +1906,9 @@
     } else if (t.classList.contains('rowchk')) {
       if (t.checked) selected.add(t.dataset.id); else selected.delete(t.dataset.id);
       renderWork();
+    } else if (t.classList.contains('adchck')) {
+      if (t.checked) adminSelected.add(t.dataset.id); else adminSelected.delete(t.dataset.id);
+      var ops = $('adminRecOps'); if (ops) ops.hidden = !adminSelected.size;
     } else if (t.id === 'wStage' || t.id === 'wType') renderWork();
     else if (t.id === 'hFilter') renderHistory();
     else if (t.id === 'aFilter') renderAudit();
@@ -1725,6 +1953,7 @@
   function init() {
     initFormSelects();
     applyTheme();
+    loadDownloadDir();
     var had = loadState();
     var ready = had ? Promise.resolve() : (function () {
       showProgress('正在准备演示数据…');
