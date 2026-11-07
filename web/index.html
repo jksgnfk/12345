@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>宸阳书院报销系统 · 网页版归档工作台</title>
+<style>
+:root{
+  --bg:#f2faf6; --panel:#ffffff; --panel2:#f6fbf8; --line:#dcefe4;
+  --text:#16352a; --text2:#5b7a6c; --text3:#8aa99a;
+  --cyan:#1faa6b; --cyan-l:#e6f7ee; --cyan-d:#158755;
+  --blue:#2f7fd1; --blue-l:#eaf3fc; --amber:#c9820b; --amber-l:#fdf3e0;
+  --red:#cf4b40; --red-l:#fbeceb; --purple:#7a5bd0; --purple-l:#f1ecfb;
+  --shadow:0 2px 14px rgba(31,170,107,.07);
+}
+[data-theme="dark"]{
+  --bg:#101a16; --panel:#17231e; --panel2:#1e2c25; --line:#2c4035;
+  --text:#e6f2eb; --text2:#a3bcae; --text3:#75907f;
+  --cyan:#39c987; --cyan-l:#1b3a2b; --cyan-d:#2aa76d;
+  --blue:#6aa9ea; --blue-l:#1b3048; --amber:#e0a748; --amber-l:#3a2f18;
+  --red:#ea7b72; --red-l:#3a2321; --purple:#a68ee6; --purple-l:#2c2540;
+  --shadow:0 2px 14px rgba(0,0,0,.22);
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;overflow-x:hidden}
+button,input,select{font-family:inherit;font-size:16px}
+.app{max-width:1120px;margin:0 auto;padding:20px 16px calc(40px + env(safe-area-inset-bottom))}
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:13px}
+.mark{width:42px;height:42px;flex:none;border:2px solid var(--cyan);border-radius:11px;transform:rotate(45deg);background:var(--cyan-l);position:relative}
+.mark::after{content:"";position:absolute;inset:10px;border:1px solid var(--cyan);border-radius:5px}
+.brand h1{margin:0;font-size:19px;font-weight:600;letter-spacing:.3px}
+.brand p{margin:2px 0 0;font-size:13px;color:var(--text2)}
+.hdr-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.badge{font-size:12px;padding:5px 10px;border-radius:20px;background:var(--amber-l);color:var(--amber);border:1px solid var(--line)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow)}
+.stat .k{font-size:13px;color:var(--text2)}
+.stat .v{font-size:23px;font-weight:600;margin-top:3px;letter-spacing:.3px}
+.stat .v.c{color:var(--cyan)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
+.inp{height:42px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--panel2);color:var(--text);outline:none;font-size:16px;min-width:0}
+.inp:focus{border-color:var(--cyan)}
+#search{flex:1 1 240px}
+.sel{flex:0 1 150px;cursor:pointer}
+.spacer{flex:1 1 auto}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:9px 16px;border-radius:10px;border:1px solid transparent;font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap;transition:transform .12s,filter .12s}
+.btn:active{transform:scale(.98)}
+.btn:hover{filter:brightness(1.04)}
+.btn.primary{background:var(--cyan);color:#fff}
+.btn.ghost{background:var(--panel2);border-color:var(--line);color:var(--text)}
+.btn.sm{min-height:34px;padding:5px 12px;font-size:13px}
+.bulkbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;background:var(--panel2);border-bottom:1px solid var(--line)}
+.chk{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--text2);cursor:pointer}
+.chk input{width:17px;height:17px;accent-color:var(--cyan);cursor:pointer}
+.selcount{font-size:13px;color:var(--text3)}
+.table-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-weight:500;color:var(--text2);font-size:13px;padding:12px 10px;background:var(--panel2);border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover{background:var(--panel2)}
+.tbl tbody tr:last-child td{border-bottom:none}
+.t-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.money{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:12px;white-space:nowrap}
+.tag.s0{background:var(--blue-l);color:var(--blue)}
+.tag.s1{background:var(--amber-l);color:var(--amber)}
+.tag.s2{background:var(--purple-l);color:var(--purple)}
+.tag.s3{background:var(--blue-l);color:var(--blue)}
+.tag.s4{background:var(--cyan-l);color:var(--cyan)}
+.tag.rj{background:var(--red-l);color:var(--red)}
+.c-check{width:38px;text-align:center}
+.c-act{text-align:right;white-space:nowrap}
+.empty{padding:44px 16px;text-align:center;color:var(--text3)}
+.ft{margin-top:16px;text-align:center;font-size:12px;color:var(--text3);line-height:1.8}
+.mask{position:fixed;inset:0;background:rgba(8,22,16,.42);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--panel);z-index:21;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.16)}
+.drawer-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+.drawer-hd h2{margin:0;font-size:17px;font-weight:600}
+.drawer-bd{flex:1;overflow-y:auto;padding:16px 18px}
+.drawer-ft{display:flex;gap:10px;padding:14px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.drawer-ft .btn{flex:1 1 160px}
+.file-btn{position:relative;overflow:hidden}
+.sec{margin-bottom:20px}
+.sec h3{margin:0 0 10px;font-size:14px;font-weight:600;color:var(--text2)}
+.kv{display:grid;grid-template-columns:96px 1fr;gap:7px 10px;font-size:14px}
+.kv .k{color:var(--text3)}
+.kv .v{word-break:break-all}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:flex;gap:12px;position:relative;padding-bottom:14px}
+.tl li:last-child{padding-bottom:0}
+.tl .dot{width:11px;height:11px;border-radius:50%;background:var(--line);flex:none;margin-top:6px;position:relative;z-index:1}
+.tl li.on .dot{background:var(--cyan)}
+.tl li.cur .dot{box-shadow:0 0 0 4px var(--cyan-l)}
+.tl li:not(:last-child)::before{content:"";position:absolute;left:5px;top:16px;bottom:0;width:1px;background:var(--line)}
+.tl .tx{font-size:14px}
+.tl .tm{font-size:12px;color:var(--text3)}
+.mat{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.mat:last-child{border-bottom:none}
+.mat .n{word-break:break-all}
+.mat .m{font-size:12px;color:var(--text3);white-space:nowrap}
+.rej{background:var(--red-l);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px;color:var(--red)}
+.progress{position:fixed;inset:0;background:rgba(8,22,16,.5);z-index:30;display:flex;align-items:center;justify-content:center;padding:20px}
+.pg-card{background:var(--panel);border-radius:16px;padding:24px;width:min(400px,100%);box-shadow:var(--shadow)}
+.pg-card h3{margin:0 0 14px;font-size:16px;font-weight:600}
+.pg-track{height:8px;border-radius:8px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+.pg-fill{height:100%;width:0;background:var(--cyan);transition:width .18s}
+.pg-card p{margin:10px 0 0;font-size:13px;color:var(--text2)}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:40;background:var(--text);color:var(--panel);padding:11px 18px;border-radius:10px;font-size:14px;max-width:90vw;text-align:center;box-shadow:var(--shadow)}
+@media (max-width:760px){
+  .app{padding:14px 12px calc(30px + env(safe-area-inset-bottom))}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat .v{font-size:20px}
+  .toolbar,.bulkbar{padding:12px}
+  #search{flex:1 1 100%}
+  .sel{flex:1 1 calc(50% - 5px)}
+  .bulkbar .btn{flex:1 1 calc(50% - 6px)}
+  .tbl thead{display:none}
+  .tbl,.tbl tbody,.tbl tr,.tbl td{display:block;width:100%}
+  .tbl tr{border:1px solid var(--line);border-radius:12px;margin:10px;padding:10px;background:var(--panel)}
+  .tbl td{border:none;padding:5px 0;display:flex;justify-content:space-between;gap:14px;text-align:right}
+  .tbl td::before{content:attr(data-label);color:var(--text3);font-size:13px;flex:none;text-align:left}
+  .tbl td.c-check{justify-content:flex-start}
+  .tbl td.c-act{justify-content:flex-end;border-top:1px solid var(--line);margin-top:6px;padding-top:10px}
+  .tbl td.c-check::before,.tbl td.c-act::before{display:none}
+  .kv{grid-template-columns:84px 1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hdr">
+    <div class="brand">
+      <div class="mark"></div>
+      <div><h1>宸阳书院报销系统</h1><p>网页版归档工作台 · 一键导出 ZIP</p></div>
+    </div>
+    <div class="hdr-actions">
+      <span class="badge" id="modeBadge">离线演示模式</span>
+      <button class="btn ghost sm" id="themeBtn">切换深色</button>
+    </div>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="panel">
+    <div class="toolbar">
+      <input class="inp" id="search" placeholder="搜索事由 / 提交人 / 编号">
+      <select class="inp sel" id="stageSel"><option value="">全部阶段</option></select>
+      <select class="inp sel" id="typeSel"><option value="">全部类型</option></select>
+      <div class="spacer"></div>
+      <button class="btn ghost" id="importBtn">导入 JSON</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+    <div class="bulkbar">
+      <label class="chk"><input type="checkbox" id="selectAll"> 全选</label>
+      <span class="selcount" id="selCount">已选 0 条</span>
+      <div class="spacer"></div>
+      <button class="btn ghost" id="exportAllBtn">导出全部</button>
+      <button class="btn primary" id="exportSelBtn">一键导出所选</button>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead><tr>
+          <th class="c-check"></th><th>报销事由</th><th>提交人</th><th>类型</th>
+          <th>金额</th><th>阶段</th><th>材料</th><th>提交时间</th><th class="c-act"></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" hidden>没有符合条件的单据</div>
+  </section>
+
+  <footer class="ft">
+    离线原型 · 数据与字段口径对齐小程序 store.js（STAGES / MATNAME / MAX_FILES=50）<br>
+    ZIP 打包移植自 utils/zip.js，纯前端零依赖，中文文件名可直接解压。导入含云端 fileID 的记录时，文件本体需在小程序端导出或接入云函数网关。
+  </footer>
+</div>
+
+<div class="mask" id="mask" hidden></div>
+<aside class="drawer" id="drawer" hidden>
+  <div class="drawer-hd"><h2 id="dTitle">单据详情</h2><button class="btn ghost sm" id="closeDrawer">关闭</button></div>
+  <div class="drawer-bd" id="drawerBody"></div>
+  <div class="drawer-ft">
+    <label class="btn ghost file-btn">添加本地材料<input type="file" id="addFile" multiple hidden></label>
+    <button class="btn primary" id="exportOneBtn">一键导出本单</button>
+  </div>
+</aside>
+
+<div class="progress" id="progress" hidden>
+  <div class="pg-card">
+    <h3 id="pgTitle">正在打包…</h3>
+    <div class="pg-track"><div class="pg-fill" id="pgFill"></div></div>
+    <p id="pgText">准备中</p>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ---------- 与小程序 utils/store.js 保持一致的口径 ---------- */
+const STAGES = [
+  {k:0,name:'已提交'},{k:1,name:'审核中'},{k:2,name:'老师已签字'},
+  {k:3,name:'提交至计财处'},{k:4,name:'项目已完成'}
+];
+const MATNAME = {
+  invoice:'发票', plan:'策划案（附预算表）', pay:'支付截图', purchase:'商品购买截图',
+  proof:'材料证明截图', claim:'领用清单', other:'其他（备用）'
+};
+const PAY_METHODS = ['学生付款','老师工资卡付款','老师公务卡','老师对公卡付款','学校对公账户付款'];
+const MAX_FILES = 50;
+
+/* ---------- 通用工具 ---------- */
+const $ = (id) => document.getElementById(id);
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function sanitize(n){ return String(n || 'file').replace(/[\\/:*?"<>|]/g,'_').slice(0,60); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmtMoney(n){ return '¥' + (Number(n)||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
+function fmtDate(ts){ if(!ts) return '—'; const d=new Date(Number(ts)); if(isNaN(d)) return '—';
+  const p=x=>String(x).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function dateStr(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate()); }
+function guessExt(p){ const m=String(p||'').split('?')[0].match(/\.([a-zA-Z0-9]+)$/); return m?m[1].toLowerCase():'bin'; }
+function textBuffer(s){ return new TextEncoder().encode(s).buffer; }
+function countMats(r){ let n=0; Object.keys(r.materials||{}).forEach(k=>n+=(r.materials[k]||[]).length); return n; }
+function stageLabel(r){ return r.rejected ? '已退回' : (STAGES[r.stage]||STAGES[0]).name; }
+function stageTag(r){ return r.rejected ? '<span class="tag rj">已退回</span>'
+  : '<span class="tag s'+Math.min(4,Math.max(0,Number(r.stage)||0))+'">'+esc(stageLabel(r))+'</span>'; }
+function sleep0(){ return new Promise(r=>setTimeout(r,0)); }
+
+/* ZIP:BEGIN —— 移植自 utils/zip.js，仅把「写文件」改为返回 Uint8Array */
+function makeCRCTable(){
+  const t=new Uint32Array(256);
+  for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; }
+  return t;
+}
+const CRC_TABLE=makeCRCTable();
+function crc32(buf){ let c=0xFFFFFFFF;
+  for(let i=0;i<buf.length;i++) c=(c>>>8)^CRC_TABLE[(c^buf[i])&0xFF];
+  return (c^0xFFFFFFFF)>>>0;
+}
+function utf8Bytes(str){
+  const out=[];
+  for(let i=0;i<str.length;i++){
+    let c=str.charCodeAt(i);
+    if(c<0x80) out.push(c);
+    else if(c<0x800) out.push(0xC0|(c>>6),0x80|(c&0x3F));
+    else if(c>=0xD800&&c<=0xDBFF){
+      const c2=str.charCodeAt(++i);
+      const cp=0x10000+((c&0x3FF)<<10)+(c2&0x3FF);
+      out.push(0xF0|(cp>>18),0x80|((cp>>12)&0x3F),0x80|((cp>>6)&0x3F),0x80|(cp&0x3F));
+    } else out.push(0xE0|(c>>12),0x80|((c>>6)&0x3F),0x80|(c&0x3F));
+  }
+  return new Uint8Array(out);
+}
+function toUint8(b){ return b instanceof Uint8Array ? b : new Uint8Array(b); }
+function buildZip(entries){
+  const files=entries.map(e=>({name:e.name,data:toUint8(e.buffer)}));
+  const nameBytes=files.map(f=>utf8Bytes(f.name));
+  const crcs=files.map(f=>crc32(f.data));
+  const sizes=files.map(f=>f.data.length);
+  let localSize=0,cdSize=0;
+  for(let i=0;i<files.length;i++){ localSize+=30+nameBytes[i].length+sizes[i]; cdSize+=46+nameBytes[i].length; }
+  const total=localSize+cdSize+22;
+  const buf=new Uint8Array(total);
+  const dv=new DataView(buf.buffer);
+  let off=0;
+  const u32=v=>{dv.setUint32(off,v>>>0,true);off+=4;};
+  const u16=v=>{dv.setUint16(off,v&0xFFFF,true);off+=2;};
+  const bytes=a=>{buf.set(a,off);off+=a.length;};
+  const FLAG=0x0800, offsets=[];
+  for(let i=0;i<files.length;i++){
+    offsets.push(off);
+    u32(0x04034b50);u16(20);u16(FLAG);u16(0);u16(0);u16(0);
+    u32(crcs[i]);u32(sizes[i]);u32(sizes[i]);u16(nameBytes[i].length);u16(0);
+    bytes(nameBytes[i]);bytes(files[i].data);
+  }
+  const cdStart=off;
+  for(let i=0;i<files.length;i++){
+    u32(0x02014b50);u16(20);u16(20);u16(FLAG);u16(0);u16(0);u16(0);
+    u32(crcs[i]);u32(sizes[i]);u32(sizes[i]);u16(nameBytes[i].length);
+    u16(0);u16(0);u16(0);u16(0);u32(0);u32(offsets[i]);
+    bytes(nameBytes[i]);
+  }
+  u32(0x06054b50);u16(0);u16(0);u16(files.length);u16(files.length);u32(cdSize);u32(cdStart);u16(0);
+  return buf;
+}
+/* ZIP:END */
+
+/* ---------- 演示数据（字段与小程序 submit.js 一致） ---------- */
+function mkDemo(){
+  const DAY=86400000, now=Date.now();
+  const defs=[
+    {id:'R20261028001',reason:'迎新晚会物资采购',name:'张三',dept:'学生会',type:'活动',total:1280.50,pay:0,stage:4,days:10,
+      mats:{invoice:2,plan:1,pay:1,purchase:1},note:'舞台装饰、道具与耗材'},
+    {id:'R20261101002',reason:'社团骨干培训资料打印',name:'李悦',dept:'项目部',type:'培训',total:356.00,pay:0,stage:1,days:6,
+      mats:{invoice:1,plan:1,pay:1},note:'培训手册 40 份'},
+    {id:'R20261102003',reason:'赴杭参赛差旅报销',name:'王浩',dept:'外联部',type:'差旅',total:892.00,pay:1,stage:2,days:5,
+      mats:{invoice:2,pay:1,proof:1},note:'高铁往返 + 住宿两晚'},
+    {id:'R20261103004',reason:'办公室耗材采购',name:'陈曦',dept:'办公室',type:'采购',total:214.80,pay:0,stage:0,days:4,
+      mats:{invoice:1,pay:1,purchase:1},note:''},
+    {id:'R20261104005',reason:'志愿者服装采购',name:'赵宁',dept:'文艺部',type:'采购',total:1680.00,pay:4,stage:1,days:3,
+      mats:{invoice:1,claim:1,pay:1},note:'含服装领用清单',rejected:true,rejectReason:'发票缺少购买方抬头，请补充后重新提交。'},
+    {id:'R20261105006',reason:'讲座嘉宾接待费用',name:'孙淼',dept:'学术部',type:'其他',total:480.00,pay:0,stage:3,days:2,
+      mats:{invoice:1,pay:1,other:1},note:'含签到表扫描件'}
+  ];
+  return defs.map(d=>{
+    const createdAt=now-d.days*DAY;
+    const materials={};
+    Object.keys(d.mats).forEach(k=>{
+      materials[k]=Array.from({length:d.mats[k]},(_,i)=>({
+        type:(k==='plan'||k==='claim'||k==='other')?'file':'image',
+        name:MATNAME[k]+' '+(i+1),
+        ext:(k==='plan'||k==='other')?'txt':(k==='claim'?'csv':'png'),
+        path:'', fileID:'demo://'+d.id+'/'+k+'/'+i
+      }));
+    });
+    const stageLog={};
+    for(let s=0;s<=d.stage;s++) stageLog[s]=createdAt+s*DAY;
+    return {
+      id:d.id,userId:d.name,name:d.name,sid:'',academy:'宸阳书院',dept:d.dept,phone:'',
+      reason:d.reason,type:d.type,payMethod:PAY_METHODS[d.pay],clothing:false,total:d.total,
+      note:d.note,materials,stage:d.stage,rejected:!!d.rejected,
+      rejectReason:d.rejectReason||'',rejectAt:d.rejected?createdAt+DAY:0,stageLog,
+      createdAt,updatedAt:createdAt+d.stage*DAY
+    };
+  });
+}
+
+/* ---------- 演示材料生成（让导出包内含真实可打开的文件） ---------- */
+function pngBuffer(lines){
+  return new Promise(resolve=>{
+    try{
+      const c=document.createElement('canvas'); c.width=720; c.height=420;
+      const g=c.getContext('2d');
+      g.fillStyle='#ffffff'; g.fillRect(0,0,720,420);
+      g.strokeStyle='#1faa6b'; g.lineWidth=5; g.strokeRect(14,14,692,392);
+      g.fillStyle='#1faa6b'; g.fillRect(14,14,692,62);
+      g.fillStyle='#ffffff'; g.font='500 24px "PingFang SC","Microsoft YaHei",sans-serif';
+      g.fillText('宸阳书院报销系统 · 材料示意',36,55);
+      g.fillStyle='#16352a'; g.font='500 27px "PingFang SC","Microsoft YaHei",sans-serif';
+      g.fillText(lines[0]||'',40,128);
+      g.font='17px "PingFang SC","Microsoft YaHei",sans-serif'; g.fillStyle='#5b7a6c';
+      (lines.slice(1)||[]).forEach((t,i)=>g.fillText(t,40,172+i*32));
+      g.fillStyle='#9ab5a7'; g.font='14px sans-serif';
+      g.fillText('离线演示数据 · 非真实票据',40,382);
+      c.toBlob(b=>{ if(!b){resolve(textBuffer('图片生成失败'));return;} b.arrayBuffer().then(resolve).catch(()=>resolve(textBuffer('图片生成失败'))); },'image/png');
+    }catch(e){ resolve(textBuffer('图片生成失败：'+e.message)); }
+  });
+}
+async function materialBuffer(rec,key,f){
+  if(f.ext==='png') return pngBuffer([
+    (MATNAME[key]||key)+' · '+f.name,
+    '单据编号：'+rec.id,
+    '报销事由：'+rec.reason,
+    '提交人：'+rec.name+'（'+rec.dept+'）',
+    '报销金额：'+fmtMoney(rec.total),
+    '材料类别：'+(MATNAME[key]||key)
+  ]);
+  if(f.ext==='csv') return textBuffer('\uFEFF序号,物品,数量,领用人\n1,志愿者上衣,20,赵宁\n2,志愿者帽子,20,赵宁\n');
+  return textBuffer(
+    '宸阳书院报销系统 · '+(MATNAME[key]||key)+'\n'+
+    '----------------------------------------\n'+
+    '单据编号：'+rec.id+'\n'+
+    '报销事由：'+rec.reason+'\n'+
+    '提交人：'+rec.name+'（'+rec.dept+'）\n'+
+    '报销类型：'+rec.type+'\n'+
+    '报销金额：'+fmtMoney(rec.total)+'\n'+
+    '材料名称：'+f.name+'\n'+
+    '----------------------------------------\n'+
+    '本文件为离线演示数据，用于验证网页版一键导出功能。\n'
+  );
+}
+async function prepareRecords(list){
+  for(const rec of list){
+    for(const k of Object.keys(rec.materials||{})){
+      for(const f of (rec.materials[k]||[])){
+        if(!f._buffer) f._buffer=await materialBuffer(rec,k,f);
+      }
+    }
+  }
+}
+
+/* ---------- 状态 ---------- */
+let records=[], selected=new Set(), currentId=null, toastTimer=null, pgDone=0, pgTotal=1;
+
+function filtered(){
+  const q=($('search').value||'').trim().toLowerCase();
+  const st=$('stageSel').value, ty=$('typeSel').value;
+  return records.filter(r=>{
+    if(st!=='' && String(r.stage)!==st) return false;
+    if(ty!=='' && r.type!==ty) return false;
+    if(!q) return true;
+    return [r.reason,r.name,r.id,r.dept,r.academy].join(' ').toLowerCase().includes(q);
+  });
+}
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.hidden=false;
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>{t.hidden=true;},3200);
+}
+function renderStats(){
+  const total=records.reduce((n,r)=>n+(Number(r.total)||0),0);
+  const pending=records.filter(r=>!r.rejected&&r.stage<3).length;
+  const done=records.filter(r=>!r.rejected&&r.stage>=4).length;
+  const items=[
+    ['单据总数',String(records.length),''],
+    ['报销总额',fmtMoney(total),'c'],
+    ['流转中',String(pending),''],
+    ['已完成',String(done),'']
+  ];
+  $('stats').innerHTML=items.map(x=>'<div class="stat"><div class="k">'+x[0]+'</div><div class="v '+x[2]+'">'+esc(x[1])+'</div></div>').join('');
+}
+function render(){
+  const rows=filtered();
+  renderStats();
+  $('empty').hidden=rows.length>0;
+  $('tbody').innerHTML=rows.map(r=>{
+    const checked=selected.has(r.id)?'checked':'';
+    return '<tr data-id="'+esc(r.id)+'">'+
+      '<td class="c-check" data-label="选择"><input type="checkbox" class="rowchk" data-id="'+esc(r.id)+'" '+checked+'></td>'+
+      '<td data-label="报销事由"><div>'+esc(r.reason)+'</div><div class="t-sub">'+esc(r.id)+'</div></td>'+
+      '<td data-label="提交人"><div>'+esc(r.name)+'</div><div class="t-sub">'+esc(r.dept||'—')+'</div></td>'+
+      '<td data-label="类型">'+esc(r.type||'—')+'</td>'+
+      '<td data-label="金额"><span class="money">'+fmtMoney(r.total)+'</span></td>'+
+      '<td data-label="阶段">'+stageTag(r)+'</td>'+
+      '<td data-label="材料">'+countMats(r)+' 份</td>'+
+      '<td data-label="提交时间">'+fmtDate(r.createdAt)+'</td>'+
+      '<td class="c-act" data-label="操作"><button class="btn primary sm exp1" data-id="'+esc(r.id)+'">一键导出</button></td>'+
+    '</tr>';
+  }).join('');
+  $('selCount').textContent='已选 '+selected.size+' 条';
+  const vis=rows.filter(r=>selected.has(r.id)).length;
+  $('selectAll').checked=rows.length>0&&vis===rows.length;
+  $('selectAll').indeterminate=vis>0&&vis<rows.length;
+}
+function openDrawer(id){
+  const r=records.find(x=>x.id===id); if(!r) return;
+  currentId=id;
+  $('dTitle').textContent=r.reason||'单据详情';
+  const kv=[
+    ['单据编号',r.id],['报销事由',r.reason],['报销类型',r.type],['报销金额',fmtMoney(r.total)],
+    ['提交人',r.name],['书院',r.academy],['部门',r.dept],['付款方式',r.payMethod],
+    ['当前阶段',stageLabel(r)],['提交时间',fmtDate(r.createdAt)],['备注',r.note||'—']
+  ];
+  let html='<div class="sec"><h3>基本信息</h3><div class="kv">'+kv.map(x=>
+    '<div class="k">'+esc(x[0])+'</div><div class="v">'+esc(x[1])+'</div>').join('')+'</div></div>';
+  if(r.rejected) html+='<div class="sec"><h3>退回原因</h3><div class="rej">'+esc(r.rejectReason||'未填写')+'</div></div>';
+  html+='<div class="sec"><h3>流程时间线</h3><ul class="tl">'+STAGES.map(s=>{
+    const on=!r.rejected&&Number(r.stage)>=s.k;
+    const cur=!r.rejected&&Number(r.stage)===s.k;
+    const t=(r.stageLog&&r.stageLog[s.k])?fmtDate(r.stageLog[s.k]):'';
+    return '<li class="'+(on?'on ':'')+(cur?'cur':'')+'"><span class="dot"></span><div>'+
+      '<div class="tx">'+esc(s.name)+'</div><div class="tm">'+(t||'—')+'</div></div></li>';
+  }).join('')+'</ul></div>';
+  html+='<div class="sec"><h3>材料清单（'+countMats(r)+' 份 / 上限 '+MAX_FILES+'）</h3>';
+  const keys=Object.keys(r.materials||{});
+  if(!keys.length) html+='<div class="empty">暂无材料</div>';
+  keys.forEach(k=>{
+    (r.materials[k]||[]).forEach(f=>{
+      const size=f._buffer&&f._buffer.byteLength?Math.round(f._buffer.byteLength/1024)+' KB':'云端';
+      html+='<div class="mat"><span class="n">'+esc((MATNAME[k]||k)+' · '+f.name)+'</span><span class="m">'+esc((f.ext||'bin').toUpperCase()+' · '+size)+'</span></div>';
+    });
+  });
+  html+='</div>';
+  $('drawerBody').innerHTML=html;
+  $('mask').hidden=false; $('drawer').hidden=false;
+}
+function closeDrawer(){ $('mask').hidden=true; $('drawer').hidden=true; currentId=null; }
+
+/* ---------- 导出 ---------- */
+function setProgress(p,text){ $('pgFill').style.width=p+'%'; $('pgText').textContent=text; }
+function showProgress(title){ $('pgTitle').textContent=title; setProgress(0,'准备中'); $('progress').hidden=false; }
+function hideProgress(){ $('progress').hidden=true; }
+function bump(){ pgDone++; setProgress(Math.min(96,Math.round(pgDone/pgTotal*96)),'已处理 '+pgDone+' / '+pgTotal+' 个文件'); }
+function download(bytes,filename){
+  const blob=new Blob([bytes],{type:'application/zip'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+function recordInfo(r){
+  const L=[];
+  L.push('宸阳书院报销系统 · 单据信息');
+  L.push('========================================');
+  L.push('单据编号：'+r.id);
+  L.push('报销事由：'+r.reason);
+  L.push('报销类型：'+r.type);
+  L.push('报销金额：'+fmtMoney(r.total));
+  L.push('付款方式：'+(r.payMethod||'—'));
+  L.push('提交人：'+(r.name||'—')+'  书院：'+(r.academy||'—')+'  部门：'+(r.dept||'—'));
+  L.push('当前阶段：'+stageLabel(r));
+  L.push('提交时间：'+fmtDate(r.createdAt));
+  L.push('备注：'+(r.note||'—'));
+  if(r.rejected) L.push('退回原因：'+(r.rejectReason||'未填写'));
+  L.push('');
+  L.push('流程时间线：');
+  STAGES.forEach(s=>{
+    const t=(r.stageLog&&r.stageLog[s.k])?fmtDate(r.stageLog[s.k]):'—';
+    L.push('  ['+((!r.rejected&&Number(r.stage)>=s.k)?'x':' ')+'] '+s.name+'   '+t);
+  });
+  L.push('');
+  L.push('材料清单（共 '+countMats(r)+' 份）：');
+  Object.keys(r.materials||{}).forEach(k=>{
+    (r.materials[k]||[]).forEach((f,i)=>L.push('  '+(MATNAME[k]||k)+' '+(i+1)+'：'+(f.name||'—')+'  ['+(f.ext||'bin')+']'));
+  });
+  L.push('');
+  L.push('说明：本文件由网页版归档工作台生成。');
+  return L.join('\n');
+}
+function csvCell(v){ const s=String(v==null?'':v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
+function buildCsv(list){
+  const head=['单据编号','报销事由','类型','提交人','书院','部门','金额(元)','付款方式','当前阶段','是否退回','退回原因','材料数','提交时间'];
+  const rows=list.map(r=>[
+    r.id,r.reason,r.type,r.name,r.academy,r.dept,(Number(r.total)||0).toFixed(2),
+    r.payMethod,stageLabel(r),r.rejected?'是':'否',r.rejectReason||'',countMats(r),fmtDate(r.createdAt)
+  ]);
+  return '\uFEFF'+[head,...rows].map(x=>x.map(csvCell).join(',')).join('\r\n');
+}
+function buildReadme(list,mode,failures,fileCount){
+  const L=[];
+  L.push('宸阳书院报销系统 · 网页版一键导出说明');
+  L.push('========================================');
+  L.push('导出时间：'+new Date().toLocaleString('zh-CN'));
+  L.push('导出模式：'+mode);
+  L.push('单据数量：'+list.length+' 条');
+  L.push('文件数量：'+fileCount+' 个');
+  L.push('数据来源：'+(window.__imported?'外部导入 JSON（元数据）':'内置离线演示数据'));
+  L.push('');
+  L.push('目录与命名规则');
+  L.push('  单条导出：00-单据信息.txt + 01-发票.png 等，按材料类别顺序编号');
+  L.push('  批量导出：每条单据一个子目录，根目录附 汇总.csv 与本说明');
+  L.push('  命名口径与小程序 utils/exporter.js 一致：序号-材料类别.扩展名');
+  L.push('  中文文件名使用 UTF-8 标志位，Windows / macOS 均可正常解压');
+  L.push('');
+  if(failures.length){
+    L.push('未能包含的文件（'+failures.length+' 项）');
+    failures.forEach(f=>L.push('  - '+f));
+    L.push('  原因：离线网页版无法读取云端 fileID 或小程序本地路径。');
+    L.push('  处理：请在小程序端导出，或接入 HTTP 云函数网关后由网页端换取临时链接。');
+  } else {
+    L.push('全部材料均已包含，无跳过项。');
+  }
+  L.push('');
+  L.push('注：ZIP 采用 STORE 方式（不压缩），以保证中文名兼容与打包速度。');
+  return L.join('\n');
+}
+async function collectEntries(rec,prefix,failures){
+  const out=[];
+  out.push({name:(prefix?prefix+'/':'')+'00-单据信息.txt',buffer:textBuffer(recordInfo(rec))});
+  let idx=0;
+  for(const k of Object.keys(rec.materials||{})){
+    for(const f of (rec.materials[k]||[])){
+      idx++;
+      const buf=f._buffer;
+      if(!buf||(buf.byteLength||0)===0){
+        failures.push(rec.id+' / '+(MATNAME[k]||k)+' / '+(f.name||'文件')+'（仅含云端 fileID 或路径，无本地内容）');
+        bump(); continue;
+      }
+      const ext=(f.ext&&f.ext!=='IMG')?String(f.ext).toLowerCase():(guessExt(f.path||f.name||'')||'bin');
+      const nm=pad(idx)+'-'+sanitize(MATNAME[k]||k)+'.'+ext;
+      out.push({name:prefix?prefix+'/'+nm:nm,buffer:buf});
+      bump();
+      if(pgDone%2===0) await sleep0();
+    }
+  }
+  return out;
+}
+async function exportRecords(list){
+  if(!list.length){ toast('请先选择要导出的单据'); return; }
+  const batch=list.length>1;
+  showProgress(batch?'正在批量打包…':'正在打包单据…');
+  pgDone=0; pgTotal=Math.max(1,list.reduce((n,r)=>n+countMats(r)+1,0));
+  const failures=[], entries=[];
+  try{
+    for(let i=0;i<list.length;i++){
+      const r=list[i];
+      const prefix=batch?(pad(i+1)+'-'+sanitize(r.reason||'单据')+'-'+sanitize(r.id)):'';
+      setProgress(Math.min(96,Math.round(pgDone/pgTotal*96)),'正在处理第 '+(i+1)+' / '+list.length+' 条单据');
+      entries.push(...await collectEntries(r,prefix,failures));
+    }
+    if(batch) entries.push({name:'汇总.csv',buffer:textBuffer(buildCsv(list))});
+    setProgress(98,'正在生成 ZIP…');
+    await sleep0();
+    entries.push({name:'导出说明.txt',buffer:textBuffer(buildReadme(list,batch?'批量导出':'单条导出',failures,entries.length+1))});
+    const bytes=buildZip(entries);
+    const fn=batch?('报销材料-批量-'+dateStr()+'.zip'):('报销材料-'+sanitize(list[0].reason||'单据')+'-'+sanitize(list[0].id)+'.zip');
+    setProgress(100,'打包完成，正在下载');
+    download(bytes,fn);
+    toast('已导出 '+list.length+' 条单据 / '+entries.length+' 个文件'+(failures.length?('，'+failures.length+' 项跳过（见导出说明）'):''));
+  }catch(e){
+    toast('导出失败：'+(e&&e.message?e.message:'未知错误'));
+  }finally{
+    setTimeout(hideProgress,450);
+  }
+}
+
+/* ---------- 导入 JSON（兼容小程序 records 结构） ---------- */
+function normalizeRecord(x){
+  if(!x||typeof x!=='object') return null;
+  const mats={};
+  Object.keys(x.materials||{}).forEach(k=>{
+    mats[k]=(Array.isArray(x.materials[k])?x.materials[k]:[]).map(f=>({
+      type:(f&&f.type)||'file',
+      name:(f&&f.name)||MATNAME[k]||k,
+      ext:(f&&f.ext&&f.ext!=='IMG')?String(f.ext).toLowerCase():guessExt((f&&(f.path||f.name))||''),
+      path:(f&&f.path)||'',fileID:(f&&f.fileID)||'',_buffer:null
+    }));
+  });
+  return {
+    id:String(x.id||('R'+Math.random().toString(36).slice(2,10))),
+    userId:x.userId||'',name:x.name||x.userId||'—',sid:x.sid||'',
+    academy:x.academy||'',dept:x.dept||'',phone:x.phone||'',
+    reason:x.reason||'（未填写事由）',type:x.type||'其他',
+    payMethod:x.payMethod||'',clothing:!!x.clothing,
+    total:Number(x.total)||0,note:x.note||'',
+    materials:mats,stage:Math.min(4,Math.max(0,Number(x.stage)||0)),
+    rejected:!!x.rejected,rejectReason:x.rejectReason||'',
+    stageLog:x.stageLog||{0:x.createdAt||Date.now()},
+    createdAt:Number(x.createdAt)||Date.now(),updatedAt:Number(x.updatedAt)||Date.now()
+  };
+}
+
+/* ---------- 事件绑定 ---------- */
+$('stageSel').innerHTML='<option value="">全部阶段</option>'+STAGES.map(s=>'<option value="'+s.k+'">'+esc(s.name)+'</option>').join('');
+$('typeSel').innerHTML='<option value="">全部类型</option>'+['活动','采购','差旅','培训','其他'].map(t=>'<option value="'+t+'">'+esc(t)+'</option>').join('');
+['search','stageSel','typeSel'].forEach(id=>{
+  $(id).addEventListener(id==='search'?'input':'change',render);
+});
+$('selectAll').addEventListener('change',e=>{
+  const rows=filtered();
+  if(e.target.checked) rows.forEach(r=>selected.add(r.id));
+  else rows.forEach(r=>selected.delete(r.id));
+  render();
+});
+$('tbody').addEventListener('change',e=>{
+  if(!e.target.classList.contains('rowchk')) return;
+  if(e.target.checked) selected.add(e.target.dataset.id); else selected.delete(e.target.dataset.id);
+  render();
+});
+$('tbody').addEventListener('click',e=>{
+  const exp=e.target.closest('.exp1');
+  if(exp){ e.stopPropagation(); const r=records.find(x=>x.id===exp.dataset.id); if(r) exportRecords([r]); return; }
+  if(e.target.classList.contains('rowchk')) return;
+  const tr=e.target.closest('tr'); if(tr) openDrawer(tr.dataset.id);
+});
+$('mask').addEventListener('click',closeDrawer);
+$('closeDrawer').addEventListener('click',closeDrawer);
+$('exportOneBtn').addEventListener('click',()=>{
+  const r=records.find(x=>x.id===currentId); if(r) exportRecords([r]);
+});
+$('exportSelBtn').addEventListener('click',()=>exportRecords(records.filter(r=>selected.has(r.id))));
+$('exportAllBtn').addEventListener('click',()=>exportRecords(filtered()));
+$('addFile').addEventListener('change',async e=>{
+  const r=records.find(x=>x.id===currentId); if(!r) return;
+  const files=Array.from(e.target.files||[]);
+  if(!files.length) return;
+  const free=MAX_FILES-countMats(r);
+  if(free<=0){ toast('已达 '+MAX_FILES+' 份上限'); e.target.value=''; return; }
+  const use=files.slice(0,free);
+  if(!r.materials.other) r.materials.other=[];
+  for(const f of use){
+    const buf=await f.arrayBuffer();
+    r.materials.other.push({type:'file',name:f.name,ext:guessExt(f.name)||'bin',path:'',fileID:'',_buffer:buf});
+  }
+  e.target.value='';
+  openDrawer(r.id); render();
+  toast('已添加 '+use.length+' 个本地文件'+(files.length>use.length?('，超出的 '+(files.length-use.length)+' 个因上限被忽略'):''));
+});
+$('importBtn').addEventListener('click',()=>$('importFile').click());
+$('importFile').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  try{
+    const data=JSON.parse(await f.text());
+    const arr=Array.isArray(data)?data:(data.records||data.data||[]);
+    if(!Array.isArray(arr)) throw new Error('JSON 顶层应为数组或含 records 字段的对象');
+    const next=arr.map(normalizeRecord).filter(Boolean);
+    if(!next.length) throw new Error('未解析到有效记录');
+    records=next; selected.clear(); window.__imported=true;
+    $('modeBadge').textContent='外部导入 · '+records.length+' 条';
+    render();
+    toast('已导入 '+records.length+' 条记录（文件本体不含在内，导出时会生成说明）');
+  }catch(err){ toast('导入失败：'+(err&&err.message?err.message:'格式错误')); }
+  e.target.value='';
+});
+$('themeBtn').addEventListener('click',()=>{
+  const next=document.documentElement.dataset.theme==='dark'?'light':'dark';
+  document.documentElement.dataset.theme=next;
+  $('themeBtn').textContent=next==='dark'?'切换浅色':'切换深色';
+  try{ localStorage.setItem('cy-web-theme',next); }catch(e){}
+});
+try{ const t=localStorage.getItem('cy-web-theme'); if(t){ document.documentElement.dataset.theme=t; $('themeBtn').textContent=t==='dark'?'切换浅色':'切换深色'; } }catch(e){}
+
+/* ---------- 启动 ---------- */
+(async function init(){
+  showProgress('正在准备演示材料…');
+  records=mkDemo();
+  await prepareRecords(records);
+  render();
+  hideProgress();
+})();
+</script>
+</body>
+</html>

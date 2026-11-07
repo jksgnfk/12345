@@ -1,6 +1,6 @@
 {
   "description": "宸阳书院报销系统（微信小程序版）",
-  "packOptions": { "ignore": [], "include": [] },
+  "packOptions": { "ignore": [ { "type": "folder", "value": ".workbuddy" }, { "type": "folder", "value": ".git" }, { "type": "folder", "value": "web" } ], "include": [] },
   "setting": {
     "es6": true,
     "enhance": true,

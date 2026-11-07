@@ -11,3 +11,6 @@ Thumbs.db
 
 # 本地临时文件
 .temp/
+
+# WorkBuddy 工具数据（非工程源码）
+.workbuddy/
