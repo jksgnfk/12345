@@ -2,7 +2,10 @@
  * 宸阳书院报销系统 · 网页版主逻辑
  * 功能对齐小程序 8 个页面：登录 / 首页工作台 / 提交 / 进度 /
  * 历史 / 审核 / 详情 / 公告，另加数据管理与一键导出。
- * 数据：localStorage（元数据）+ IndexedDB（材料文件本体），零后端。
+ * 数据：localStorage（元数据）+ IndexedDB（材料文件本体）。
+ *      线上部署且 /api/ping 可用时自动进入「多端共享」：单据与公告走 /api/state，
+ *      所有打开同一链接的设备共用一份数据；file:// 或纯静态托管自动降级为纯本地。
+ *      身份 / 角色 / 密钥 / 未读时间戳 / 材料文件本体始终只留在本机。
  * 依赖：zip.js（window.CyZip）
  * ============================================================ */
 (function () {
@@ -173,23 +176,44 @@
   }
 
   /* ---------- 状态与持久化 ---------- */
-  var state = { records: [], announcements: [], user: null, role: null, lastRead: 0, sync: { url: '', token: '' } };
+  var state = { records: [], announcements: [], tombs: {}, user: null, role: null, lastRead: 0, sync: { url: '', token: '' } };
   var selected = new Set(), currentId = null, currentTab = 'work', formFiles = {};
   var pgDone = 0, pgTotal = 1, _modalYes = null;
+  var _lastIds = { records: null, announcements: null };
 
   function cleanRec(r) {
     return JSON.parse(JSON.stringify(r, function (k, v) { return k === '_buf' ? undefined : v; }));
   }
+  /* 自动墓碑：与上次保存的 id 集合比对，捕捉所有删除入口
+   * （删除单据 / 清理过期 / 清空 / 重置 / 导入覆盖），让删除也能跨设备传播。 */
+  function noteDeletions() {
+    var now = Date.now(), recIds = {}, annIds = {};
+    state.records.forEach(function (r) { if (r && r.id != null) recIds[String(r.id)] = 1; });
+    state.announcements.forEach(function (a) { if (a && a._id != null) annIds[String(a._id)] = 1; });
+    if (!online.applying) {
+      ['records', 'announcements'].forEach(function (kind) {
+        var prev = _lastIds[kind], cur = kind === 'records' ? recIds : annIds;
+        if (!prev) return;
+        Object.keys(prev).forEach(function (id) {
+          if (!cur[id] && !state.tombs[id]) state.tombs[id] = now;
+        });
+      });
+    }
+    _lastIds.records = recIds; _lastIds.announcements = annIds;
+  }
   function saveState() {
+    noteDeletions();
     try {
       localStorage.setItem(K_STATE, JSON.stringify({
-        version: 2,
+        version: 3,
         records: state.records.map(cleanRec),
         announcements: state.announcements,
+        tombs: state.tombs,
         user: state.user, role: state.role, lastRead: state.lastRead,
         sync: state.sync
       }));
     } catch (e) { toast('本地存储写入失败：' + (e && e.message ? e.message : '容量不足')); }
+    scheduleOnlinePush();
   }
   function loadState() {
     var raw = null;
@@ -199,6 +223,7 @@
       var s = JSON.parse(raw);
       state.records = Array.isArray(s.records) ? s.records : [];
       state.announcements = Array.isArray(s.announcements) ? s.announcements : [];
+      state.tombs = (s.tombs && typeof s.tombs === 'object') ? s.tombs : {};
       state.user = s.user || null;
       state.role = s.role || null;
       state.lastRead = Number(s.lastRead) || 0;
@@ -245,8 +270,8 @@
   function mkDemoAnnouncements() {
     var now = Date.now(), D = 86400000;
     return [
-      { _id: genId('A'), title: '关于 11 月报销材料提交规范的通知', content: '一、发票需填写完整购买方抬头与纳税人识别号。\n二、活动策划案须附预算表，支付截图需清晰可辨。\n三、单笔最多提交 50 份材料，请按需整理后上传。', pinned: true, createdAt: now - 2 * D, updatedAt: now - 2 * D },
-      { _id: genId('A'), title: '计财处月末结账时间提醒', content: '本月最后三个工作日暂停接收新的报销单，请各项目组提前安排提交时间。', pinned: false, createdAt: now - D, updatedAt: now - D }
+      { _id: 'A_DEMO_1', title: '关于 11 月报销材料提交规范的通知', content: '一、发票需填写完整购买方抬头与纳税人识别号。\n二、活动策划案须附预算表，支付截图需清晰可辨。\n三、单笔最多提交 50 份材料，请按需整理后上传。', pinned: true, createdAt: now - 2 * D, updatedAt: now - 2 * D },
+      { _id: 'A_DEMO_2', title: '计财处月末结账时间提醒', content: '本月最后三个工作日暂停接收新的报销单，请各项目组提前安排提交时间。', pinned: false, createdAt: now - D, updatedAt: now - D }
     ];
   }
 
@@ -498,9 +523,11 @@
         (r.materials[k] || []).forEach(function (f) { files++; size += Number(f.size) || 0; });
       });
     });
+    var storeLine = online.enabled
+      ? '在线共享：单据与公告存于本站服务端，多端自动同步；材料文件本体与身份/角色仍存本机。'
+      : '存储：localStorage（元数据）+ IndexedDB（文件本体）· 数据不会自动上传任何服务器。';
     $('storeInfo').innerHTML = '单据 ' + state.records.length + ' 条 · 公告 ' + state.announcements.length +
-      ' 条 · 材料 ' + files + ' 份（约 ' + (size / 1024 / 1024).toFixed(2) + ' MB）<br>' +
-      '存储：localStorage（元数据）+ IndexedDB（文件本体）· 数据不会自动上传任何服务器。';
+      ' 条 · 材料 ' + files + ' 份（约 ' + (size / 1024 / 1024).toFixed(2) + ' MB）<br>' + storeLine;
   }
   function renderAll() {
     renderHeader(); renderWork(); renderSubmit(); renderTrack();
@@ -601,10 +628,13 @@
     openModal();
   }
   function openPrivacy() {
+    var storeNote = online.enabled
+      ? '2. 当前为<b>在线共享模式</b>：您填写的单据（含提交人姓名、部门等）与公告会保存在本站服务端，并在打开同一分享链接的设备间自动同步；<b>材料文件本体、身份登记、审核密钥与未读状态仍只留在本机浏览器</b>，不会上传。'
+      : '2. 当前为<b>纯本地模式</b>：所有数据仅保存在当前浏览器的 localStorage 与 IndexedDB 中，不会自动上传服务器；仅在您主动配置「云同步」并点击上传时才会发送到您填写的网关地址。';
     $('modalTitle').textContent = '隐私协议（网页版）';
     $('modalBody').innerHTML = '<p class="hint">1. 本网页版仅采集您<b>手动填写</b>的用户名、书院、部门，以及您主动上传的报销材料；不获取微信昵称、头像、openid 等任何微信资料。<br>' +
-      '2. 所有数据默认仅保存在当前浏览器的 localStorage 与 IndexedDB 中，不会自动上传服务器；仅在您主动配置「云同步」并点击上传时才会发送到您填写的网关地址。<br>' +
-      '3. 您可通过「数据管理」导出备份、清理或清空全部本地数据。<br>' +
+      storeNote + '<br>' +
+      '3. 您可通过「数据管理」导出备份、清理或清空全部数据。<br>' +
       '4. 未勾选同意前，不会写入任何身份信息。</p>';
     $('modalFoot').innerHTML = '<button class="btn primary" data-act="loginOpen">返回登记</button>';
     openModal();
@@ -1254,6 +1284,128 @@
     }).catch(function (e) { syncStatus('上传失败：' + e.message); });
   }
 
+  /* ---------- 在线共享（本站 /api/state，自动多端同步） ----------
+   * 探测到后端才启用；file:// 或纯静态托管自动降级为纯本地，原功能不受影响。
+   * 服务端为唯一数据源：写操作后防抖推送，6 秒轮询 rev；服务端按 id + updatedAt
+   * 做记录级合并并返回全量，客户端以返回值覆盖本机，保证各端最终一致。 */
+  var online = {
+    enabled: false, applying: false, pushing: false,
+    pushTimer: null, pollTimer: null, rev: 0, lastOk: 0
+  };
+
+  function apiFetch(p, opt) {
+    return fetch(p, Object.assign({ cache: 'no-store' }, opt || {})).then(function (res) {
+      return res.text().then(function (txt) {
+        var j = {};
+        try { j = JSON.parse(txt || '{}'); } catch (e) { j = {}; }
+        if (!res.ok) throw new Error((j && j.msg) || ('HTTP ' + res.status));
+        if (j && j.ok === false) throw new Error(j.msg || '服务端拒绝请求');
+        return j;
+      });
+    });
+  }
+  function apiPost(body) {
+    return apiFetch('./api/state', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+  }
+  function setOnlineStatus(t) {
+    try { if ($('syncStatus')) $('syncStatus').textContent = t; } catch (e) { }
+  }
+  function userBusy() {
+    var el = document.activeElement;
+    return !!composing || !!(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+  }
+  /* 材料文件本体不跨设备同步：远端记录带回的 key 只在原设备有效，
+   * 因此把本机已有的 key 按「单据 id + 类别 + 序号 + 文件名」还原回去，
+   * 保证本机仍能导出真实文件；其它设备的材料可用完整快照搬运。 */
+  function preserveLocalKeys(remote) {
+    var map = {};
+    state.records.forEach(function (r) {
+      if (!r || !r.id) return;
+      var m = {};
+      Object.keys(r.materials || {}).forEach(function (k) {
+        (r.materials[k] || []).forEach(function (f, i) { m[k + ':' + i + ':' + ((f && f.name) || '')] = (f && f.key) || ''; });
+      });
+      map[r.id] = m;
+    });
+    remote.forEach(function (r) {
+      var m = map[r.id] || {};
+      Object.keys(r.materials || {}).forEach(function (k) {
+        (r.materials[k] || []).forEach(function (f, i) {
+          var key = m[k + ':' + i + ':' + (f.name || '')];
+          if (key) f.key = key;
+        });
+      });
+    });
+  }
+  function applyRemote(j) {
+    if (!j || j.ok === false) return;
+    online.applying = true;
+    try {
+      online.rev = Number(j.rev) || 0;
+      var next = (Array.isArray(j.records) ? j.records : []).map(normalizeRecord).filter(Boolean);
+      preserveLocalKeys(next);
+      state.records = next;
+      if (Array.isArray(j.announcements)) state.announcements = j.announcements;
+      if (j.tombs && typeof j.tombs === 'object') state.tombs = j.tombs;
+      selected.clear();
+      saveState();
+      renderAll();
+    } finally { online.applying = false; }
+  }
+  function scheduleOnlinePush() {
+    if (!online.enabled || online.applying) return;
+    clearTimeout(online.pushTimer);
+    online.pushTimer = setTimeout(onlinePush, 900);
+  }
+  function onlinePush() {
+    if (!online.enabled || online.applying) return;
+    if (online.pushing) { scheduleOnlinePush(); return; }
+    online.pushing = true;
+    return apiPost({
+      baseRev: online.rev,
+      records: state.records.map(cleanRec),
+      announcements: state.announcements,
+      tombs: state.tombs || {}
+    }).then(function (j) {
+      online.pushing = false;
+      online.lastOk = Date.now();
+      applyRemote(j);
+      setOnlineStatus('在线共享 ✓ 已同步（' + new Date().toLocaleTimeString('zh-CN') + '）· 所有打开此链接的设备共用同一份数据');
+    }).catch(function (e) {
+      online.pushing = false;
+      setOnlineStatus('同步失败：' + e.message + '（数据已存本机，稍后自动重试）');
+    });
+  }
+  function onlinePoll() {
+    if (!online.enabled || online.applying || online.pushing || userBusy()) return;
+    apiFetch('./api/state').then(function (j) {
+      if (j && Number(j.rev) !== online.rev) applyRemote(j);
+      online.lastOk = Date.now();
+    }).catch(function () { setOnlineStatus('连接中断，正在重试；本地功能不受影响'); });
+  }
+  function initOnlineShare() {
+    if (!/^https?:$/.test(location.protocol)) return;   // 本地双击打开 → 保持纯本地
+    apiFetch('./api/ping').then(function (j) {
+      if (!j || j.ok !== true || j.mode !== 'shared') return;
+      online.enabled = true;
+      setOnlineStatus('在线共享：正在连接…');
+      // 无论云端是否为空，首次都走一次「合并式上传」：服务端按 id + updatedAt 逐条合并，
+      // 既不会让各设备各自的演示数据重复叠加，也不会抹掉本机独有的历史数据。
+      return onlinePush().then(function () {
+        setOnlineStatus('在线共享 ✓ 多端数据已互通（' + new Date().toLocaleTimeString('zh-CN') + '）');
+        clearInterval(online.pollTimer);
+        online.pollTimer = setInterval(onlinePoll, 6000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) onlinePoll(); });
+        window.addEventListener('online', onlinePoll);
+        toast('已连接多端共享：单据与公告将在各设备间自动同步');
+      });
+    }).catch(function () {
+      // 纯静态托管（无 /api 后端）：安静降级为纯本地模式，不打扰用户
+    });
+  }
+
   /* ---------- 主题 ---------- */
   function applyTheme() {
     var t = 'light';
@@ -1400,6 +1552,7 @@
       resetForm();
       renderAll();
       switchTab('work');
+      initOnlineShare();
       try {
         if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
           navigator.serviceWorker.register('./sw.js').catch(function () { });

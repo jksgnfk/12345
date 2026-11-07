@@ -1,0 +1,9 @@
+{
+  "name": "cy-reimburse-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "报销系统网页版：静态工作台 + 多端共享数据服务",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

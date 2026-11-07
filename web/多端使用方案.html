@@ -106,7 +106,7 @@ th{background:var(--panel2);font-weight:600;color:var(--text2);white-space:nowra
     <div class="tw"><table>
       <tr><th>层次</th><th>含义</th><th>当前状态</th></tr>
       <tr><td>① 屏幕适配</td><td>手机 / 平板 / 电脑都能正常操作、不缩放、不横向溢出</td><td><span class="tagx t-ok">已完成</span> 响应式断点、16px 输入防 iOS 缩放、安全区、表格转卡片、触控 42px、深色主题</td></tr>
-      <tr><td>② 数据一致</td><td>任一设备的改动，其他设备能看到</td><td><span class="tagx t-now">核心缺口</span> 现为 localStorage + IndexedDB，<b>每台设备一份独立数据</b></td></tr>
+      <tr><td>② 数据一致</td><td>任一设备的改动，其他设备能看到</td><td><span class="tagx t-ok">已实现</span> 新增本站共享后端（<code>server.js</code> + <code>/api/state</code>），网页各设备共用一份数据；重新发布后线上生效</td></tr>
       <tr><td>③ 与小程序同源</td><td>网页与微信小程序读写同一批报销单、公告、材料</td><td><span class="tagx t-mid">需网关</span> 浏览器无法直连微信云开发数据库，且云存储只有 <code>fileID</code></td></tr>
     </table></div>
     <p>两条硬约束决定了架构：</p>
@@ -115,6 +115,10 @@ th{background:var(--panel2);font-weight:600;color:var(--text2);white-space:nowra
       <li>云存储只保存 <code>fileID</code>，网页要下载材料必须先在服务端调 <code>getTempFileURL</code> 换临时链接（每批上限 100 个），并处理 CORS。</li>
     </ul>
     <div class="callout info">因此网页版的设计原则是：<b>前端零密钥、零直连，所有云端访问都经网关</b>；小程序链路保持不动，网页只是新增一个入口，不改动现有 8 个页面与 2 个云函数。</div>
+    <div class="callout info"><b>2026-11-07 更新 · 数据互通现有两条独立路线：</b><br>
+      ① <b>网页 ↔ 网页（多设备共享）</b>：新增零依赖 Node 服务 <code>web/server.js</code>，同一进程托管静态页面并提供 <code>/api/ping</code>、<code>/api/state</code>。前端自动探测，探测到即进入在线共享：写操作防抖上传、6 秒轮询 <code>rev</code>；服务端按 <code>id + updatedAt</code> 做记录级合并，删除通过 <code>tombs</code> 墓碑传播，旧数据不会覆盖新数据。<b>不需要微信云开发控制台、不需要额外账号</b>，重新发布一次即生效。<br>
+      ② <b>网页 ↔ 微信小程序</b>：仍走下方 L1 的 <code>syncGateway</code> 云函数网关，需在云开发控制台启用 HTTP 访问服务并配置 <code>SYNC_TOKEN</code>。<br>
+      两条路线互不影响：以 <code>file://</code> 打开或纯静态托管时自动降级为纯本地模式，原有功能全部照常可用。材料文件本体、身份登记、审核密钥与未读状态始终只留在本机浏览器。</div>
   </section>
 
   <section id="s1">

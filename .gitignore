@@ -12,5 +12,8 @@ Thumbs.db
 # 本地临时文件
 .temp/
 
+# 在线共享服务的运行数据（含真实单据，禁止入库）
+web/data/
+
 # WorkBuddy 工具数据（非工程源码）
 .workbuddy/
