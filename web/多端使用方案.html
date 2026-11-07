@@ -252,20 +252,22 @@ th{background:var(--panel2);font-weight:600;color:var(--text2);white-space:nowra
       <div class="figcap">图 1 · L1 推荐架构：三端共用静态站点，经云函数网关访问与小程序相同的云开发环境</div>
     </div>
 
-    <h3>接口契约（网页版云同步客户端已按此实现）</h3>
+    <h3>接口契约（网关与网页端均已按此实现）</h3>
     <div class="tw"><table>
       <tr><th>路径</th><th>请求体</th><th>成功响应</th><th>用途</th></tr>
-      <tr><td><code>POST /sync/ping</code></td><td><code>{token}</code></td><td><code>{ok:true, env, time}</code></td><td>测试连接与口令</td></tr>
-      <tr><td><code>POST /sync/pull</code></td><td><code>{token}</code></td><td><code>{ok:true, records, announcements, updatedAt}</code></td><td>全量拉取（网页端会先弹覆盖确认）</td></tr>
-      <tr><td><code>POST /sync/push</code></td><td><code>{token, records, announcements}</code></td><td><code>{ok:true, updatedAt}</code></td><td>全量上传本地数据</td></tr>
+      <tr><td><code>POST /sync/ping</code></td><td><code>{token, action:'ping'}</code></td><td><code>{ok:true, env, time}</code></td><td>测试连接与口令</td></tr>
+      <tr><td><code>POST /sync/pull</code></td><td><code>{token, action:'pull'}</code></td><td><code>{ok:true, records, announcements, fileUrls, updatedAt}</code></td><td>全量拉取；<code>fileUrls</code> 是材料临时下载链接</td></tr>
+      <tr><td><code>POST /sync/push</code></td><td><code>{token, action:'push', records, announcements}</code></td><td><code>{ok:true, written, skipped, updatedAt}</code></td><td>全量上传；云端较新的记录会被跳过</td></tr>
     </table></div>
-    <p>失败统一返回 <code>{ok:false, msg}</code>；网页端已做 <code>fetch</code> 异常、非 2xx、业务失败三层容错，任何失败都<b>不影响纯本地模式</b>。</p>
+    <p>请求体同时带 <code>action</code> 与路径末段，网关两者兼容，不依赖 HTTP 访问服务的路径字段实现；响应为 <code>{statusCode, headers, body}</code> 标准结构，含 CORS 头与 <code>OPTIONS</code> 预检。失败统一返回 <code>{ok:false, msg}</code>；网页端已做 <code>fetch</code> 异常、非 2xx、业务失败、20 秒超时四层容错，任何失败都<b>不影响纯本地模式</b>。</p>
+    <div class="callout"><b>材料同步边界：</b>拉取时网关用 <code>getTempFileURL</code> 分批（每批 50 个）把云存储 <code>fileID</code> 换成临时链接，网页端尽力并发下载到本机文件仓库，<b>失败不阻断</b>（可再用完整快照补齐）。反向的「上传本地」只同步单据与公告<b>元数据</b>——网页端新添加的材料文件本体不会写回云存储，需要分片上传（L2）。</div>
     <div class="callout">字段口径必须与小程序 <code>utils/store.js</code> 严格一致：<code>STAGES</code>（5 阶段）、<code>MATNAME</code>（7 类材料）、<code>TYPE_MATERIALS</code>、<code>MAX_FILES=50</code>、<code>EXPIRE_MS=30天</code>、记录 <code>stage/stageLog/rejected/rejectLog/updatedAt</code>。建议把常量抽成两端共享的 <code>shared/constants.js</code>，否则命名与阶段判断会逐步漂移。</div>
   </section>
 
   <section id="s4">
-    <h2><span class="no">4</span> 云函数骨架（L1 最小可用）</h2>
-    <p class="sub">新建 <code>cloudfunctions/syncGateway/</code>，与现有 <code>auditStage</code> / <code>announcement</code> 同环境，无需新建服务。</p>
+    <h2><span class="no">4</span> 云函数实现（L1，代码已就位）</h2>
+    <p class="sub">完整可部署代码已写入 <code>cloudfunctions/syncGateway/index.js</code> 与 <code>package.json</code>，与现有 <code>auditStage</code> / <code>announcement</code> 同环境，无需新建服务。下方为精简示意，<b>以工程内真实文件为准</b>。</p>
+    <div class="callout info">真实实现较示意补强五点：① <code>skip</code> 分批取全量（云函数单次上限 100 条，示意里的 <code>limit(1000)</code> 会被截断）；② 标准 HTTP 响应与 CORS / <code>OPTIONS</code> 预检；③ <code>action</code> 优先取请求体、兼容多种路径字段；④ <code>push</code> 按 <code>updatedAt</code> 拒绝旧数据覆盖并保留云端 <code>_openid</code>；⑤ <code>pull</code> 换取材料临时链接。</div>
     <pre><code>// cloudfunctions/syncGateway/index.js
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -280,16 +282,25 @@ exports.main = async (event) =&gt; {
   }
   if (!TOKEN || body.token !== TOKEN) return { ok: false, msg: '口令错误' }
 
-  const action = (event.path || '').split('/').pop() || body.action
+  const action = body.action || (event.path || '').split('/').pop()
   const rec = db.collection('records'), ann = db.collection('announcements')
 
   if (action === 'ping') return { ok: true, env: cloud.getWXContext().ENV, time: Date.now() }
 
+  // 分批：云函数单次最多 100 条，skip 翻页取全量
+  async function all(col, pages) {
+    const out = []
+    for (let i = 0; i &lt; pages; i++) {
+      const r = await col.skip(i * 100).limit(100).get().catch(() =&gt; ({ data: [] }))
+      out.push(...r.data)
+      if (r.data.length &lt; 100) break
+    }
+    return out
+  }
+
   if (action === 'pull') {
-    const [r, a] = await Promise.all([
-      rec.limit(1000).get(), ann.limit(200).get()
-    ])
-    return { ok: true, records: r.data, announcements: a.data, updatedAt: Date.now() }
+    const [records, announcements] = await Promise.all([all(rec, 20), all(ann, 5)])
+    return { ok: true, records, announcements, fileUrls, updatedAt: Date.now() }
   }
 
   if (action === 'push') {
@@ -307,13 +318,14 @@ exports.main = async (event) =&gt; {
   }
   return { ok: false, msg: '未知操作' }
 }</code></pre>
-    <p><b>配套配置：</b></p>
+    <p><b>代码已就位，仅差三步控制台配置：</b></p>
     <ul>
-      <li><code>package.json</code> 依赖 <code>"wx-server-sdk": "~2.6.3"</code>（与现有云函数一致）。</li>
-      <li>云开发控制台 → HTTP 访问服务 → 绑定路径 <code>/sync/*</code> 到该云函数；环境变量加 <code>SYNC_TOKEN</code>。</li>
-      <li>响应头需允许跨域：<code>Access-Control-Allow-Origin</code>（建议白名单到静态站点域名）、<code>Access-Control-Allow-Headers: Content-Type</code>，并处理 <code>OPTIONS</code> 预检。</li>
-      <li>网页端「数据管理 → 云同步」填 <code>https://&lt;你的网关域名&gt;</code> 与口令 → 点「测试连接」。</li>
+      <li><b>部署：</b>微信开发者工具右键 <code>cloudfunctions/syncGateway</code> →「上传并部署：云端安装依赖」；<code>package.json</code> 已配 <code>wx-server-sdk ~2.6.3</code>。</li>
+      <li><b>开网关：</b>云开发控制台 → HTTP 访问服务 → 绑定路径 <code>/sync/*</code> 到 <code>syncGateway</code>；在云函数环境变量中配置 <code>SYNC_TOKEN</code>（口令，务必自行设定），可选 <code>SYNC_ORIGIN</code> 限定静态站点域名。</li>
+      <li><b>开材料下载：</b>云存储 → 跨域设置（CORS）加入静态站点域名，否则浏览器拉取临时链接会被拦（此时仅单据元数据同步，材料可用完整快照补齐）。</li>
+      <li><b>接通：</b>网页端「数据管理 → 云同步」填 <code>https://&lt;网关域名&gt;</code> 与口令 → 点「测试连接」→「拉取云端」。CORS 头与 <code>OPTIONS</code> 预检已由网关返回，无需额外配置。</li>
     </ul>
+    <div class="callout"><b>当前默认值仍是纯本地</b>：未填网关地址时云同步客户端直接拒绝请求，网页版离线双击照常使用。不部署网关 = 完全不影响现有功能；部署后 = 手机 / 平板 / 电脑的网页与小程序连同一份云端数据。</div>
     <div class="callout info">材料文件本体不随全量 JSON 传输：小程序上传后存的是 <code>fileID</code>，网页端要取出真实文件需服务端 <code>cloud.getTempFileURL({fileList})</code> 换临时链接（每批 ≤100），并在云存储配置 CORS。这也是「完整快照 ZIP」在 L0/L1 阶段依然有价值的原因 —— 它携带文件本体，可离线归档。</div>
   </section>
 
@@ -352,7 +364,7 @@ exports.main = async (event) =&gt; {
     <ol>
       <li><b>现在就验证 L0：</b>在工作台「数据管理」导出完整快照 → 用手机打开同一份 <code>web/index.html</code>（或先传到手机）→ 导入快照，确认单据、公告、材料都在，导出 ZIP 正常。</li>
       <li><b>部署静态站点：</b>把 <code>web/</code> 整个目录上传到静态托管，拿到 HTTPS 地址；此时 PWA 生效，三端都能「添加到主屏幕」并离线打开。</li>
-      <li><b>启用网关：</b>云开发控制台开 HTTP 访问服务 → 部署 <code>syncGateway</code> → 配 <code>SYNC_TOKEN</code> → 测试 <code>/sync/ping</code>。</li>
+      <li><b>启用网关：</b>部署已写好的 <code>syncGateway</code> → 云开发控制台开 HTTP 访问服务并绑定 <code>/sync/*</code> → 配 <code>SYNC_TOKEN</code> → 测试 <code>/sync/ping</code>（代码无需再写）。</li>
       <li><b>接通数据：</b>网页版「数据管理 → 云同步」填地址与口令 → 测试连接 → 先「拉取云端」拿到小程序真实数据，确认字段无误后再启用「上传本地」。</li>
       <li><b>按需升级：</b>需要自动同步再加 L2 轮询与版本号；需要网页端正式审核再加 L3 角色与审计日志。</li>
     </ol>
@@ -364,8 +376,8 @@ exports.main = async (event) =&gt; {
     <div class="tw"><table>
       <tr><th>阶段</th><th>交付物</th><th>前置条件</th><th>改动范围</th></tr>
       <tr><td>L0</td><td>完整快照导出 / 导入（含文件本体）</td><td>无</td><td><span class="tagx t-ok">本次已交付</span></td></tr>
-      <tr><td>L1</td><td>静态站点 + 云同步网关</td><td>静态托管、HTTP 访问服务、环境变量</td><td>新增 1 个云函数 + 部署；网页端零改动（客户端已内置）</td></tr>
-      <tr><td>L2</td><td>自动同步、冲突处理、材料临时链接</td><td>L1 + 云存储 CORS</td><td>前端轮询逻辑 + 网关 <code>getTempFileURL</code> 分批</td></tr>
+      <tr><td>L1</td><td>静态站点 + 云同步网关</td><td>静态托管、HTTP 访问服务、<code>SYNC_TOKEN</code>、云存储 CORS</td><td><span class="tagx t-ok">代码已交付</span> 仅差云端部署；网关分批读取 / 冲突保护 / 材料临时链接均已实现</td></tr>
+      <tr><td>L2</td><td>自动轮询、网页端材料分片上传</td><td>L1 + 更大的请求体配额</td><td>前端轮询与增量同步；补齐网页→云端的材料本体上传</td></tr>
       <tr><td>L3</td><td>角色权限、会话、审计日志</td><td>L1 + 权限模型设计</td><td>网关鉴权 + <code>audit_log</code> 集合 + 前端角色态</td></tr>
     </table></div>
     <p><b>共享字段口径（务必保持一致）：</b><code>STAGES</code> 已提交 / 审核中 / 老师已签字 / 提交至计财处 / 项目已完成；<code>MATNAME</code> 发票、策划案（附预算表）、支付截图、商品购买截图、材料证明截图、领用清单、其他（备用）；<code>MAX_FILES=50</code>；审核完毕 30 天自动清理。</p>

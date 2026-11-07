@@ -1,0 +1,9 @@
+{
+  "name": "syncGateway",
+  "version": "1.0.0",
+  "description": "宸阳书院报销系统 - 网页版多端同步 HTTP 网关（ping/pull/push）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

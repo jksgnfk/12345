@@ -1160,21 +1160,66 @@
     var c = syncCfg();
     if (!c.url) return Promise.reject(new Error('请先填写网关地址'));
     var base = c.url.replace(/\/+$/, '');
+    var action = String(path).split('/').filter(Boolean).pop() || '';
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 20000) : null;
+    var done = function (v) { if (timer) clearTimeout(timer); return v; };
     return fetch(base + path, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ token: c.token }, extra || {}))
+      body: JSON.stringify(Object.assign({ token: c.token, action: action }, extra || {})),
+      signal: ctrl ? ctrl.signal : undefined
     }).then(function (res) {
-      if (!res.ok) return Promise.reject(new Error('HTTP ' + res.status));
-      return res.json();
+      return res.text().then(function (txt) {
+        var j = {};
+        try { j = JSON.parse(txt || '{}'); } catch (e) { j = {}; }
+        if (j && typeof j.body === 'string' && j.statusCode) {
+          try { j = JSON.parse(j.body); } catch (e2) { }
+        }
+        if (!res.ok) return Promise.reject(new Error((j && j.msg) || ('HTTP ' + res.status)));
+        return j;
+      });
     }).then(function (j) {
       if (j && j.ok === false) return Promise.reject(new Error(j.msg || '云端拒绝请求'));
-      return j;
+      return done(j);
+    }, function (err) {
+      done(null);
+      var msg = (err && err.name === 'AbortError') ? '连接超时（20 秒）' : ((err && err.message) || String(err));
+      throw new Error(msg);
     });
+  }
+  /* 尽力把云端材料下载到本机文件仓库；单个失败不影响整体 */
+  function pullMaterials(urls) {
+    var jobs = [], ok = 0;
+    state.records.forEach(function (r) {
+      Object.keys(r.materials || {}).forEach(function (k) {
+        (r.materials[k] || []).forEach(function (f) {
+          if (!f.fileID || !urls[f.fileID] || f.key) return;
+          jobs.push({ f: f, url: urls[f.fileID] });
+        });
+      });
+    });
+    var i = 0;
+    function next() {
+      if (i >= jobs.length) return Promise.resolve(ok);
+      var batch = jobs.slice(i, i + 4); i += 4;
+      return Promise.all(batch.map(function (it) {
+        return fetch(it.url).then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.arrayBuffer();
+        }).then(function (buf) {
+          var key = 'cloud_' + encodeURIComponent(it.f.fileID).replace(/%/g, '');
+          return putFile(key, new Uint8Array(buf)).then(function () {
+            it.f.key = key; it.f.size = buf.byteLength || it.f.size; ok++;
+          });
+        }).catch(function () { });
+      })).then(next);
+    }
+    return next().then(function (n) { return { ok: n, total: jobs.length }; });
   }
   function syncTest() {
     syncStatus('正在连接…');
-    syncCall('/sync/ping').then(function () {
-      syncStatus('连接成功 ✓ 网关可用（' + new Date().toLocaleTimeString('zh-CN') + '）');
+    syncCall('/sync/ping').then(function (j) {
+      syncStatus('连接成功 ✓ 网关可用' + (j.env ? '（' + j.env + '）' : '') + '（' + new Date().toLocaleTimeString('zh-CN') + '）');
     }).catch(function (e) {
       syncStatus('连接失败：' + e.message + '。纯本地模式仍可正常使用，详见《多端使用方案》。');
     });
@@ -1183,12 +1228,19 @@
     syncStatus('正在拉取…');
     syncCall('/sync/pull').then(function (j) {
       var recs = Array.isArray(j.records) ? j.records : [];
+      var urls = j.fileUrls || {};
       confirmDialog('拉取云端数据', '云端返回 ' + recs.length + ' 条单据，将覆盖本机当前数据。', function () {
         state.records = recs.map(normalizeRecord).filter(Boolean);
         state.announcements = Array.isArray(j.announcements) ? j.announcements : state.announcements;
         selected.clear(); saveState(); renderAll();
-        syncStatus('已拉取 ' + state.records.length + ' 条单据（' + new Date().toLocaleTimeString('zh-CN') + '）');
         toast('云端数据已拉取');
+        var n = Object.keys(urls).length;
+        syncStatus('已拉取 ' + state.records.length + ' 条单据' + (n ? '，正在下载 ' + n + ' 份材料…' : ''));
+        if (!n) return;
+        pullMaterials(urls).then(function (r) {
+          saveState(); renderAll();
+          syncStatus('同步完成：' + state.records.length + ' 条单据，材料 ' + r.ok + '/' + r.total + ' 份（失败可用快照补齐）');
+        });
       });
     }).catch(function (e) { syncStatus('拉取失败：' + e.message); });
   }
@@ -1196,8 +1248,8 @@
     syncStatus('正在上传…');
     syncCall('/sync/push', {
       records: state.records.map(cleanRec), announcements: state.announcements
-    }).then(function () {
-      syncStatus('上传成功 ✓ ' + state.records.length + ' 条单据（' + new Date().toLocaleTimeString('zh-CN') + '）');
+    }).then(function (j) {
+      syncStatus('上传完成 ✓ 写入 ' + (j.written || 0) + ' 条，跳过 ' + (j.skipped || 0) + ' 条（云端较新）');
       toast('本地数据已上传云端');
     }).catch(function (e) { syncStatus('上传失败：' + e.message); });
   }
