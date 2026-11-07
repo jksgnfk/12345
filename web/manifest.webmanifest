@@ -1,0 +1,15 @@
+{
+  "name": "宸阳书院报销系统 · 网页版工作台",
+  "short_name": "报销工作台",
+  "description": "提交、审核、进度、公告与一键导出的跨端网页工作台",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f2faf6",
+  "theme_color": "#1faa6b",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

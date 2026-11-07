@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>网页版多端使用方案 · 宸阳书院报销系统</title>
+<style>
+:root{
+  --bg:#f2faf6; --panel:#ffffff; --panel2:#f6fbf8; --line:#dcefe4;
+  --text:#16352a; --text2:#5b7a6c; --text3:#8aa99a;
+  --cyan:#1faa6b; --cyan-l:#e6f7ee; --blue:#2f7fd1; --blue-l:#eaf3fc;
+  --amber:#c9820b; --amber-l:#fdf3e0; --red:#cf4b40; --red-l:#fbeceb;
+  --purple:#7a5bd0; --purple-l:#f1ecfb; --shadow:0 2px 14px rgba(31,170,107,.07);
+}
+[data-theme="dark"]{
+  --bg:#101a16; --panel:#17231e; --panel2:#1e2c25; --line:#2c4035;
+  --text:#e6f2eb; --text2:#a3bcae; --text3:#75907f;
+  --cyan:#39c987; --cyan-l:#1b3a2b; --blue:#6aa9ea; --blue-l:#1b3048;
+  --amber:#e0a748; --amber-l:#3a2f18; --red:#ea7b72; --red-l:#3a2321;
+  --purple:#a68ee6; --purple-l:#2c2540; --shadow:0 2px 14px rgba(0,0,0,.22);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif}
+a{color:var(--cyan);text-decoration:none}
+.wrap{max-width:940px;margin:0 auto;padding:22px 16px calc(50px + env(safe-area-inset-bottom))}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.hdr h1{margin:0 0 4px;font-size:24px;font-weight:600;letter-spacing:.3px}
+.hdr p{margin:0;color:var(--text2);font-size:14px}
+.hdr-actions{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:14px;cursor:pointer}
+.btn.primary{background:var(--cyan);color:#fff;border-color:transparent}
+.lead{background:var(--cyan-l);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:18px;font-size:14px}
+.lead b{color:var(--cyan)}
+nav.toc{display:flex;gap:6px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:20px;box-shadow:var(--shadow)}
+nav.toc a{font-size:13px;padding:5px 11px;border-radius:8px;background:var(--panel2);border:1px solid var(--line)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:16px;box-shadow:var(--shadow)}
+section h2{margin:0 0 4px;font-size:19px;font-weight:600;scroll-margin-top:16px}
+section h2 .no{display:inline-block;min-width:30px;color:var(--cyan);font-variant-numeric:tabular-nums}
+section h3{margin:20px 0 8px;font-size:16px;font-weight:600}
+section .sub{margin:0 0 14px;color:var(--text2);font-size:13px}
+p{margin:8px 0}
+ul,ol{margin:8px 0;padding-left:22px}
+li{margin:5px 0}
+code{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12.5px;font-family:Consolas,Monaco,monospace}
+pre{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.65;margin:12px 0}
+pre code{background:none;border:none;padding:0;font-size:12.5px}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin:12px 0}
+th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top}
+th{background:var(--panel2);font-weight:600;color:var(--text2);white-space:nowrap}
+.tw{overflow-x:auto}
+.tagx{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12px;white-space:nowrap}
+.t-ok{background:var(--cyan-l);color:var(--cyan)}
+.t-now{background:var(--blue-l);color:var(--blue)}
+.t-mid{background:var(--amber-l);color:var(--amber)}
+.t-later{background:var(--purple-l);color:var(--purple)}
+.callout{border-left:3px solid var(--amber);background:var(--amber-l);border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0;font-size:14px}
+.callout.info{border-left-color:var(--blue);background:var(--blue-l)}
+.callout.good{border-left-color:var(--cyan);background:var(--cyan-l)}
+.fig{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px;margin:14px 0;overflow-x:auto}
+.fig svg{display:block;width:100%;min-width:680px;height:auto}
+.figcap{font-size:12.5px;color:var(--text3);text-align:center;margin-top:6px}
+.stage{display:grid;grid-template-columns:112px 1fr;gap:14px;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;background:var(--panel2)}
+.stage .lv{font-size:15px;font-weight:600;color:var(--cyan)}
+.stage .lv small{display:block;font-size:12px;color:var(--text3);font-weight:400;margin-top:3px}
+.stage h3{margin:0 0 6px;font-size:16px}
+.ft{text-align:center;color:var(--text3);font-size:12.5px;margin-top:22px;line-height:1.9}
+@media(max-width:700px){
+  .wrap{padding:14px 12px 34px}
+  section{padding:16px 15px}
+  .hdr h1{font-size:20px}
+  .stage{grid-template-columns:1fr;gap:6px}
+  table{font-size:12.5px}
+  th,td{padding:7px 8px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hdr">
+    <div>
+      <h1>网页版多端使用方案</h1>
+      <p>宸阳书院报销系统 · 从「单机离线」到「手机 / 平板 / 电脑同源协作」 · 2026-11-07</p>
+    </div>
+    <div class="hdr-actions">
+      <a class="btn primary" href="./index.html">返回工作台</a>
+      <button class="btn" id="themeBtn">切换深色</button>
+    </div>
+  </header>
+
+  <div class="lead">
+    <b>一句话结论：</b>「屏幕适配」这一层网页版已经做完；「多端数据一致」是唯一真正的缺口。推荐按
+    <b>L0 快照搬运（零部署，今天就能用）→ L1 静态托管 + HTTP 云函数网关（推荐起步）→ L2 实时同步 → L3 身份统一</b>
+    分阶段推进。网页版已内置 L0 的完整快照导入导出、L1 所需的云同步客户端与 PWA 离线能力，方案不是纸上谈兵。
+  </div>
+
+  <nav class="toc">
+    <a href="#s0">0 · 现状与目标</a><a href="#s1">1 · 能力矩阵</a><a href="#s2">2 · 分阶段路线</a>
+    <a href="#s3">3 · L1 架构与接口</a><a href="#s4">4 · 云函数骨架</a><a href="#s5">5 · 跨端适配清单</a>
+    <a href="#s6">6 · 合规与风险</a><a href="#s7">7 · 落地顺序</a><a href="#s8">8 · 工作量表</a>
+  </nav>
+
+  <section id="s0">
+    <h2><span class="no">0</span> 现状与目标</h2>
+    <p class="sub">先把「多端」拆成三层，避免把「能在手机上打开」误当成「多端可用」。</p>
+    <div class="tw"><table>
+      <tr><th>层次</th><th>含义</th><th>当前状态</th></tr>
+      <tr><td>① 屏幕适配</td><td>手机 / 平板 / 电脑都能正常操作、不缩放、不横向溢出</td><td><span class="tagx t-ok">已完成</span> 响应式断点、16px 输入防 iOS 缩放、安全区、表格转卡片、触控 42px、深色主题</td></tr>
+      <tr><td>② 数据一致</td><td>任一设备的改动，其他设备能看到</td><td><span class="tagx t-now">核心缺口</span> 现为 localStorage + IndexedDB，<b>每台设备一份独立数据</b></td></tr>
+      <tr><td>③ 与小程序同源</td><td>网页与微信小程序读写同一批报销单、公告、材料</td><td><span class="tagx t-mid">需网关</span> 浏览器无法直连微信云开发数据库，且云存储只有 <code>fileID</code></td></tr>
+    </table></div>
+    <p>两条硬约束决定了架构：</p>
+    <ul>
+      <li>微信小程序的数据在<b>云开发环境 <code>cloud1-d7go7cz1ccef43aa4</code></b>（<code>records</code> / <code>announcements</code> 集合 + <code>uploads</code> 云存储），浏览器不能直连；官方推荐做法是<b>云函数 HTTP 访问服务</b>做网关。</li>
+      <li>云存储只保存 <code>fileID</code>，网页要下载材料必须先在服务端调 <code>getTempFileURL</code> 换临时链接（每批上限 100 个），并处理 CORS。</li>
+    </ul>
+    <div class="callout info">因此网页版的设计原则是：<b>前端零密钥、零直连，所有云端访问都经网关</b>；小程序链路保持不动，网页只是新增一个入口，不改动现有 8 个页面与 2 个云函数。</div>
+  </section>
+
+  <section id="s1">
+    <h2><span class="no">1</span> 能力矩阵</h2>
+    <p class="sub">每一阶段交付什么、需要什么前置条件。</p>
+    <div class="tw"><table>
+      <tr><th>能力</th><th>现状</th><th>L0</th><th>L1</th><th>L2</th><th>L3</th></tr>
+      <tr><td>多屏使用（响应式 / PWA）</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>离线可用</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>跨设备搬运数据</td><td>手工</td><td>✅ 快照 ZIP</td><td>✅ 自动</td><td>✅ 自动</td><td>✅ 自动</td></tr>
+      <tr><td>手机↔电脑数据一致</td><td>❌</td><td>⚠️ 手动</td><td>✅ 手动/定时</td><td>✅ 近实时</td><td>✅ 近实时</td></tr>
+      <tr><td>与小程序共享同一批单据</td><td>❌</td><td>⚠️ 导 JSON</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>网页端审核 / 退回 / 公告管理</td><td>✅ 本地</td><td>✅ 本地</td><td>✅ 同步</td><td>✅ 同步</td><td>✅ 权限校验</td></tr>
+      <tr><td>统一身份与操作审计</td><td>❌</td><td>❌</td><td>⚠️ 单口令</td><td>⚠️ 单口令</td><td>✅ 角色 + 日志</td></tr>
+    </table></div>
+  </section>
+
+  <section id="s2">
+    <h2><span class="no">2</span> 分阶段路线</h2>
+    <p class="sub">按「先能用、再自动、后实时」推进，任何阶段都可停，不需要一次性投入。</p>
+
+    <div class="stage">
+      <div class="lv">L0 · 已交付<small>零部署 · 立即可用</small></div>
+      <div>
+        <h3>快照搬运：一个 ZIP 把整台设备搬到另一台</h3>
+        <p>网页版「数据管理 → 导出完整快照」会生成 <code>records.json</code>（单据 + 公告元数据）与 <code>材料/</code> 目录（<b>全部文件本体</b>）；另一台设备「导入完整快照」即可完整恢复，材料可继续预览与导出。</p>
+        <ol>
+          <li>A 设备（电脑）导出 <code>报销数据快照-YYYYMMDD.zip</code></li>
+          <li>通过微信文件传输助手 / 网盘 / 邮件把 ZIP 发到 B 设备（手机）</li>
+          <li>B 设备打开网页版 → 数据管理 → 导入完整快照 → 选择 ZIP → 确认覆盖</li>
+        </ol>
+        <p><b>适用：</b>单人跨设备、偶尔同步、暂时没有域名或不想部署服务端。<b>局限：</b>手动触发、非实时、两端同时改会发生覆盖（后导入者胜）。</p>
+        <div class="callout good">这一步<strong>不需要任何后台配置</strong>，是验证「多端是否真的好用」最低成本的起点。ZIP 为本系统自研 STORE 格式，中文名 + CRC 已验证。</div>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="lv">L1 · 推荐起步<small>静态托管 + HTTP 网关</small></div>
+      <div>
+        <h3>一个网址，三端同源</h3>
+        <p>把 <code>web/</code> 目录整包部署到静态托管，手机 / 平板 / 电脑打开同一个 HTTPS 地址；数据统一经<b>微信云开发 HTTP 访问服务</b>的 <code>syncGateway</code> 云函数读写。网页版「数据管理 → 云同步」已内置客户端，填入网关地址与口令即可「测试连接 / 拉取云端 / 上传本地」。</p>
+        <ul>
+          <li><b>静态托管任选：</b>腾讯云开发静态网站托管（同环境，最省事）/ GitHub Pages / Vercel / 内网 Nginx。</li>
+          <li><b>网关：</b>在云开发控制台启用「HTTP 访问服务」，新建 <code>syncGateway</code> 云函数并绑定路径；口令放在云函数环境变量。</li>
+          <li><b>域名：</b>自定义域名通常需备案；内部使用可先用云开发默认域名 + 限制访问口令。</li>
+        </ul>
+        <p><b>同步粒度：</b>先做<b>全量拉取 / 全量上传</b>（记录量在千级以内完全够用），配合「拉取前确认覆盖」提示，即可避免误覆盖。此阶段不做自动冲突合并。</p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="lv">L2 · 进阶<small>近实时与冲突处理</small></div>
+      <div>
+        <h3>从手动同步到自动同步</h3>
+        <ul>
+          <li><b>触发：</b>30 秒轻量轮询 <code>/sync/pull</code> 比对 <code>updatedAt</code>，或改用 SSE / WebSocket 推送变更；页面切回前台时立即拉一次。</li>
+          <li><b>冲突：</b>每条记录带 <code>updatedAt</code> 与 <code>rev</code> 版本号，服务端做乐观锁；同单据并发写时以「最后提交者 + 操作日志」保留双方改动，退回 / 阶段推进等动作建议统一走 <code>auditStage</code> 云函数，避免网页与小程序各写一套。</li>
+          <li><b>材料：</b>服务端用 <code>cloud.getTempFileURL</code> 分批（≤100）换链接；网页端 <code>fetch</code> 并发控制在 4–6，逐条释放 ArrayBuffer，避免单笔 50 份×多单据打爆内存。</li>
+          <li><b>降级：</b>网络失败自动切回本地模式，恢复后提示「有未同步改动」。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="lv">L3 · 可选<small>身份与权限统一</small></div>
+      <div>
+        <h3>把「口令」升级成「角色」</h3>
+        <p>网关校验口令后签发短期会话，网页端按<b>提交人 / 审核员 / 最高管理</b>三角色控制可见范围与写操作；所有审核、退回、公告发布写入 <code>audit_log</code> 集合。与小程序现有 <code>ADMIN_KEY='社畜'</code> / <code>AUDIT_KEY='天选打工人'</code> 模型对齐，密钥只在服务端校验，前端不硬编码。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s3">
+    <h2><span class="no">3</span> L1 架构与接口契约</h2>
+    <p class="sub">网页只读/写入都经网关，小程序链路完全不动。</p>
+    <div class="fig">
+      <svg viewBox="0 0 860 340" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,PingFang SC,Microsoft YaHei,sans-serif">
+        <rect x="0" y="0" width="860" height="340" fill="#f6fbf8"/>
+        <!-- devices -->
+        <g fill="#eaf3fc" stroke="#2f7fd1" stroke-width="1.5">
+          <rect x="24" y="42" width="150" height="52" rx="10"/>
+          <rect x="24" y="110" width="150" height="52" rx="10"/>
+          <rect x="24" y="178" width="150" height="52" rx="10"/>
+        </g>
+        <g fill="#16352a" font-size="14" font-weight="600">
+          <text x="99" y="72" text-anchor="middle">手机浏览器</text>
+          <text x="99" y="140" text-anchor="middle">平板 / PWA</text>
+          <text x="99" y="208" text-anchor="middle">电脑浏览器</text>
+        </g>
+        <g fill="#5b7a6c" font-size="11"><text x="99" y="88" text-anchor="middle">同一 HTTPS 地址</text></g>
+        <!-- hosting -->
+        <rect x="238" y="78" width="182" height="130" rx="14" fill="#e6f7ee" stroke="#1faa6b" stroke-width="2"/>
+        <text x="329" y="112" text-anchor="middle" fill="#158755" font-size="15" font-weight="600">静态托管站点</text>
+        <g fill="#16352a" font-size="12">
+          <text x="329" y="138" text-anchor="middle">index.html / app.js / zip.js</text>
+          <text x="329" y="158" text-anchor="middle">manifest + Service Worker</text>
+          <text x="329" y="178" text-anchor="middle">localStorage + IndexedDB</text>
+        </g>
+        <!-- gateway -->
+        <rect x="470" y="78" width="176" height="130" rx="14" fill="#fdf3e0" stroke="#c9820b" stroke-width="2"/>
+        <text x="558" y="110" text-anchor="middle" fill="#c9820b" font-size="15" font-weight="600">syncGateway</text>
+        <g fill="#16352a" font-size="12">
+          <text x="558" y="136" text-anchor="middle">HTTP 访问服务</text>
+          <text x="558" y="156" text-anchor="middle">口令校验 / CORS</text>
+          <text x="558" y="176" text-anchor="middle">/sync/ping·pull·push</text>
+        </g>
+        <!-- cloud env -->
+        <rect x="682" y="42" width="160" height="200" rx="14" fill="#f1ecfb" stroke="#7a5bd0" stroke-width="2"/>
+        <text x="762" y="70" text-anchor="middle" fill="#7a5bd0" font-size="14" font-weight="600">微信云开发环境</text>
+        <g fill="#16352a" font-size="12">
+          <text x="762" y="98" text-anchor="middle">records 集合</text>
+          <text x="762" y="120" text-anchor="middle">announcements 集合</text>
+          <text x="762" y="142" text-anchor="middle">uploads 云存储</text>
+          <text x="762" y="170" text-anchor="middle">auditStage 云函数</text>
+          <text x="762" y="192" text-anchor="middle">announcement 云函数</text>
+        </g>
+        <text x="762" y="222" text-anchor="middle" fill="#5b7a6c" font-size="11">cloud1-d7go7cz1ccef43aa4</text>
+        <!-- mini program -->
+        <rect x="238" y="262" width="408" height="52" rx="10" fill="#e6f7ee" stroke="#1faa6b" stroke-width="1.5"/>
+        <text x="442" y="293" text-anchor="middle" fill="#16352a" font-size="13" font-weight="600">微信小程序（原链路不变）：wx.cloud 直连同一环境</text>
+        <!-- arrows -->
+        <defs><marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#1faa6b"/></marker></defs>
+        <g stroke="#1faa6b" stroke-width="2" fill="none" marker-end="url(#ar)">
+          <path d="M174 143 L232 143"/>
+          <path d="M420 143 L464 143"/>
+          <path d="M646 143 L676 143"/>
+          <path d="M762 242 L762 252 L442 252 L442 258"/>
+        </g>
+        <g fill="#5b7a6c" font-size="11">
+          <text x="203" y="134" text-anchor="middle">HTTPS</text>
+          <text x="442" y="134" text-anchor="middle">POST</text>
+          <text x="661" y="134" text-anchor="middle">SDK</text>
+        </g>
+      </svg>
+      <div class="figcap">图 1 · L1 推荐架构：三端共用静态站点，经云函数网关访问与小程序相同的云开发环境</div>
+    </div>
+
+    <h3>接口契约（网页版云同步客户端已按此实现）</h3>
+    <div class="tw"><table>
+      <tr><th>路径</th><th>请求体</th><th>成功响应</th><th>用途</th></tr>
+      <tr><td><code>POST /sync/ping</code></td><td><code>{token}</code></td><td><code>{ok:true, env, time}</code></td><td>测试连接与口令</td></tr>
+      <tr><td><code>POST /sync/pull</code></td><td><code>{token}</code></td><td><code>{ok:true, records, announcements, updatedAt}</code></td><td>全量拉取（网页端会先弹覆盖确认）</td></tr>
+      <tr><td><code>POST /sync/push</code></td><td><code>{token, records, announcements}</code></td><td><code>{ok:true, updatedAt}</code></td><td>全量上传本地数据</td></tr>
+    </table></div>
+    <p>失败统一返回 <code>{ok:false, msg}</code>；网页端已做 <code>fetch</code> 异常、非 2xx、业务失败三层容错，任何失败都<b>不影响纯本地模式</b>。</p>
+    <div class="callout">字段口径必须与小程序 <code>utils/store.js</code> 严格一致：<code>STAGES</code>（5 阶段）、<code>MATNAME</code>（7 类材料）、<code>TYPE_MATERIALS</code>、<code>MAX_FILES=50</code>、<code>EXPIRE_MS=30天</code>、记录 <code>stage/stageLog/rejected/rejectLog/updatedAt</code>。建议把常量抽成两端共享的 <code>shared/constants.js</code>，否则命名与阶段判断会逐步漂移。</div>
+  </section>
+
+  <section id="s4">
+    <h2><span class="no">4</span> 云函数骨架（L1 最小可用）</h2>
+    <p class="sub">新建 <code>cloudfunctions/syncGateway/</code>，与现有 <code>auditStage</code> / <code>announcement</code> 同环境，无需新建服务。</p>
+    <pre><code>// cloudfunctions/syncGateway/index.js
+const cloud = require('wx-server-sdk')
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+const db = cloud.database()
+const TOKEN = process.env.SYNC_TOKEN || ''   // 在云开发控制台配置，切勿写死在前端
+
+exports.main = async (event) =&gt; {
+  // HTTP 访问服务会把请求体放在 event.body（字符串）
+  let body = event
+  if (typeof event.body === 'string') {
+    try { body = JSON.parse(event.body || '{}') } catch (e) { body = {} }
+  }
+  if (!TOKEN || body.token !== TOKEN) return { ok: false, msg: '口令错误' }
+
+  const action = (event.path || '').split('/').pop() || body.action
+  const rec = db.collection('records'), ann = db.collection('announcements')
+
+  if (action === 'ping') return { ok: true, env: cloud.getWXContext().ENV, time: Date.now() }
+
+  if (action === 'pull') {
+    const [r, a] = await Promise.all([
+      rec.limit(1000).get(), ann.limit(200).get()
+    ])
+    return { ok: true, records: r.data, announcements: a.data, updatedAt: Date.now() }
+  }
+
+  if (action === 'push') {
+    const list = Array.isArray(body.records) ? body.records : []
+    // 逐条 upsert；材料只同步元数据，fileID 指向同一云存储
+    for (const x of list) {
+      if (!x || !x.id) continue
+      await rec.doc(x.id).set({ data: x }).catch(() =&gt; {})
+    }
+    for (const a of (body.announcements || [])) {
+      if (!a || !a._id) continue
+      await ann.doc(a._id).set({ data: a }).catch(() =&gt; {})
+    }
+    return { ok: true, updatedAt: Date.now() }
+  }
+  return { ok: false, msg: '未知操作' }
+}</code></pre>
+    <p><b>配套配置：</b></p>
+    <ul>
+      <li><code>package.json</code> 依赖 <code>"wx-server-sdk": "~2.6.3"</code>（与现有云函数一致）。</li>
+      <li>云开发控制台 → HTTP 访问服务 → 绑定路径 <code>/sync/*</code> 到该云函数；环境变量加 <code>SYNC_TOKEN</code>。</li>
+      <li>响应头需允许跨域：<code>Access-Control-Allow-Origin</code>（建议白名单到静态站点域名）、<code>Access-Control-Allow-Headers: Content-Type</code>，并处理 <code>OPTIONS</code> 预检。</li>
+      <li>网页端「数据管理 → 云同步」填 <code>https://&lt;你的网关域名&gt;</code> 与口令 → 点「测试连接」。</li>
+    </ul>
+    <div class="callout info">材料文件本体不随全量 JSON 传输：小程序上传后存的是 <code>fileID</code>，网页端要取出真实文件需服务端 <code>cloud.getTempFileURL({fileList})</code> 换临时链接（每批 ≤100），并在云存储配置 CORS。这也是「完整快照 ZIP」在 L0/L1 阶段依然有价值的原因 —— 它携带文件本体，可离线归档。</div>
+  </section>
+
+  <section id="s5">
+    <h2><span class="no">5</span> 跨端适配清单</h2>
+    <p class="sub">「能在多端打开」这部分已随本次网页版落地，无需额外开发。</p>
+    <div class="tw"><table>
+      <tr><th>项</th><th>实现</th><th>状态</th></tr>
+      <tr><td>响应式布局</td><td>760px 断点：统计 4→2 列、双栏→单栏、表格→卡片、表单标签换行</td><td><span class="tagx t-ok">已内置</span></td></tr>
+      <tr><td>iOS 聚焦不缩放</td><td>输入控件统一 16px，<code>-webkit-text-size-adjust:100%</code></td><td><span class="tagx t-ok">已内置</span></td></tr>
+      <tr><td>安全区 / 触控</td><td><code>env(safe-area-inset-bottom)</code>、按钮最小 42px、横向滚动标签栏</td><td><span class="tagx t-ok">已内置</span></td></tr>
+      <tr><td>深浅色主题</td><td>CSS 变量双主题，跟随手动切换并持久化</td><td><span class="tagx t-ok">已内置</span></td></tr>
+      <tr><td>PWA 离线</td><td><code>manifest.webmanifest</code> + <code>sw.js</code>（network-first，离线回退）；可「添加到主屏幕」全屏运行</td><td><span class="tagx t-ok">已内置</span></td></tr>
+      <tr><td>本地文件</td><td>IndexedDB 存材料本体，刷新不丢；不可用时降级内存</td><td><span class="tagx t-ok">已内置</span></td></tr>
+      <tr><td>PWA 生效条件</td><td>Service Worker 仅 <b>HTTPS / localhost</b> 注册；直接双击 <code>file://</code> 打开时自动跳过（不影响功能）</td><td><span class="tagx t-mid">需 L1 托管</span></td></tr>
+      <tr><td>多端数据一致</td><td>L0 快照 / L1 云同步 / L2 自动同步</td><td><span class="tagx t-now">见第 2 节</span></td></tr>
+    </table></div>
+  </section>
+
+  <section id="s6">
+    <h2><span class="no">6</span> 合规与风险</h2>
+    <div class="tw"><table>
+      <tr><th>风险</th><th>影响</th><th>缓解</th></tr>
+      <tr><td>口令硬编码 / 泄露</td><td>任何人可读写全部报销数据</td><td>只存云函数环境变量；前端仅用户输入并保存在本机；生产环境改短期令牌 + 角色（L3）</td></tr>
+      <tr><td>域名备案</td><td>自定义域名无法访问</td><td>内部使用先用云开发默认域名；公开发布再走备案</td></tr>
+      <tr><td>云存储 CORS / 临时链接过期</td><td>网页端材料预览与导出失败</td><td>配置 CORS 白名单；链接即用即换；导出失败写入「导出说明.txt」不中断</td></tr>
+      <tr><td>两端同时写同一单据</td><td>后写覆盖前写</td><td>L1 拉取/上传前弹覆盖确认；L2 加 <code>updatedAt+rev</code> 乐观锁；审核动作统一走 <code>auditStage</code></td></tr>
+      <tr><td>大批量导出内存</td><td>浏览器卡顿</td><td>并发 4–6、逐条释放 ArrayBuffer、单笔 50 份上限保持不变</td></tr>
+      <tr><td>隐私合规</td><td>网页若公网可达需独立告知</td><td>网页版登录已改为<b>主动勾选同意</b>、零微信资料采集；部署时保留隐私协议入口，内网使用建议加访问口令</td></tr>
+    </table></div>
+    <div class="callout good">微信小程序侧的审核合规（隐私主动勾选、仅相册、无摄像头、已删除日程表）与网页版互不影响：网页版代码放在 <code>web/</code>，已被 <code>project.config.json</code> 的 <code>packOptions.ignore</code> 排除，<b>不会打进小程序包</b>。</div>
+  </section>
+
+  <section id="s7">
+    <h2><span class="no">7</span> 推荐落地顺序</h2>
+    <ol>
+      <li><b>现在就验证 L0：</b>在工作台「数据管理」导出完整快照 → 用手机打开同一份 <code>web/index.html</code>（或先传到手机）→ 导入快照，确认单据、公告、材料都在，导出 ZIP 正常。</li>
+      <li><b>部署静态站点：</b>把 <code>web/</code> 整个目录上传到静态托管，拿到 HTTPS 地址；此时 PWA 生效，三端都能「添加到主屏幕」并离线打开。</li>
+      <li><b>启用网关：</b>云开发控制台开 HTTP 访问服务 → 部署 <code>syncGateway</code> → 配 <code>SYNC_TOKEN</code> → 测试 <code>/sync/ping</code>。</li>
+      <li><b>接通数据：</b>网页版「数据管理 → 云同步」填地址与口令 → 测试连接 → 先「拉取云端」拿到小程序真实数据，确认字段无误后再启用「上传本地」。</li>
+      <li><b>按需升级：</b>需要自动同步再加 L2 轮询与版本号；需要网页端正式审核再加 L3 角色与审计日志。</li>
+    </ol>
+    <div class="callout info">建议第 4 步<b>先只读观察一轮</b>：网页端保持只读，可完全规避与小程序 <code>saveRecord</code> 乐观更新的写入冲突；确认稳定后再开放上传。</div>
+  </section>
+
+  <section id="s8">
+    <h2><span class="no">8</span> 工作量与前置条件</h2>
+    <div class="tw"><table>
+      <tr><th>阶段</th><th>交付物</th><th>前置条件</th><th>改动范围</th></tr>
+      <tr><td>L0</td><td>完整快照导出 / 导入（含文件本体）</td><td>无</td><td><span class="tagx t-ok">本次已交付</span></td></tr>
+      <tr><td>L1</td><td>静态站点 + 云同步网关</td><td>静态托管、HTTP 访问服务、环境变量</td><td>新增 1 个云函数 + 部署；网页端零改动（客户端已内置）</td></tr>
+      <tr><td>L2</td><td>自动同步、冲突处理、材料临时链接</td><td>L1 + 云存储 CORS</td><td>前端轮询逻辑 + 网关 <code>getTempFileURL</code> 分批</td></tr>
+      <tr><td>L3</td><td>角色权限、会话、审计日志</td><td>L1 + 权限模型设计</td><td>网关鉴权 + <code>audit_log</code> 集合 + 前端角色态</td></tr>
+    </table></div>
+    <p><b>共享字段口径（务必保持一致）：</b><code>STAGES</code> 已提交 / 审核中 / 老师已签字 / 提交至计财处 / 项目已完成；<code>MATNAME</code> 发票、策划案（附预算表）、支付截图、商品购买截图、材料证明截图、领用清单、其他（备用）；<code>MAX_FILES=50</code>；审核完毕 30 天自动清理。</p>
+  </section>
+
+  <div class="ft">
+    本方案对应网页版已实现：功能对齐小程序 8 页面 · 本地持久化 · 一键导出 ZIP · 完整快照跨设备搬运 · 云同步客户端 · PWA 离线<br>
+    小程序源码零改动，<code>web/</code> 已被打包忽略 · 最终部署与域名配置需在云开发控制台完成
+  </div>
+</div>
+<script>
+document.getElementById('themeBtn').addEventListener('click', function () {
+  var cur = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = cur === 'dark' ? 'dark' : 'light';
+  this.textContent = cur === 'dark' ? '切换浅色' : '切换深色';
+});
+</script>
+</body>
+</html>
