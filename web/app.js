@@ -1284,6 +1284,14 @@
       switch (act) {
         case 'tab': switchTab(el.dataset.tab); break;
         case 'theme': toggleTheme(); break;
+        case 'toggleSecret': {
+          var sec = document.getElementById(el.dataset.for);
+          if (sec) {
+            var masked = sec.classList.toggle('secret');
+            el.textContent = masked ? '显示' : '隐藏';
+          }
+          break;
+        }
         case 'loginOpen': openLogin(); break;
         case 'privacyLink': e.preventDefault(); openPrivacy(); break;
         case 'loginSubmit': loginSubmit(); break;
@@ -1348,12 +1356,34 @@
     else if (t.id === 'importJsonFile' && t.files && t.files[0]) { importJSON(t.files[0]); t.value = ''; }
     else if (t.id === 'importSnapFile' && t.files && t.files[0]) { importSnapshot(t.files[0]); t.value = ''; }
   });
+  /* ---------- 输入法（IME）友好 ----------
+   * 中文拼音组合期间不触发筛选/重绘、不响应 Esc，避免候选词被打断或弹窗被误关。
+   * 组合结束后统一补一次筛选；列表刷新加 120ms 防抖，减少输入时的重排。 */
+  var composing = false, filterTimer = null;
+  function scheduleFilter(id) {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(function () {
+      if (id === 'wSearch') renderWork();
+      else if (id === 'hSearch') renderHistory();
+    }, 120);
+  }
+  function inComposition(e) {
+    return composing || (e && (e.isComposing || e.keyCode === 229));
+  }
+  document.addEventListener('compositionstart', function () { composing = true; });
+  document.addEventListener('compositionend', function (e) {
+    composing = false;
+    var id = e.target && e.target.id;
+    if (id === 'wSearch' || id === 'hSearch') scheduleFilter(id);
+  });
   document.addEventListener('input', function (e) {
-    if (e.target.id === 'wSearch') renderWork();
-    else if (e.target.id === 'hSearch') renderHistory();
-    else if (e.target.id === 'fTotal') $('fTotalFmt').textContent = fmtMoney(e.target.value);
+    if (inComposition(e)) return;
+    var id = e.target && e.target.id;
+    if (id === 'wSearch' || id === 'hSearch') scheduleFilter(id);
+    else if (id === 'fTotal') $('fTotalFmt').textContent = fmtMoney(e.target.value);
   });
   document.addEventListener('keydown', function (e) {
+    if (inComposition(e)) return;   // 组合中按 Esc 是「取消候选词」，不关闭弹窗
     if (e.key === 'Escape') { closeModal(); closeDrawer(); }
   });
 

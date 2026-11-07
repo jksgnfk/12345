@@ -2,7 +2,7 @@
  * 策略：同源 GET 走 network-first（部署后自动更新），离线回退缓存。
  * 云同步是跨域 POST，不拦截；file:// 协议下不会注册本脚本。
  */
-var CACHE = 'cy-web-v2';
+var CACHE = 'cy-web-v3';
 var ASSETS = [
   './', './index.html', './app.js', './zip.js',
   './manifest.webmanifest', './icon.svg',

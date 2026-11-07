@@ -60,6 +60,9 @@ a{color:var(--cyan);text-decoration:none}
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
 .inp{height:42px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--panel2);color:var(--text);outline:none;font-size:16px;min-width:0}
 .inp:focus{border-color:var(--cyan)}
+/* 视觉遮蔽用 CSS，不用 type=password：后者在部分系统会禁用中文输入法（IME） */
+.inp.secret,.fin.secret{-webkit-text-security:disc}
+input[type=text],textarea{ime-mode:auto}
 textarea.inp{height:auto;min-height:88px;resize:vertical;line-height:1.6}
 #wSearch,#hSearch{flex:1 1 240px}
 .sel{flex:0 1 150px;cursor:pointer}
@@ -328,7 +331,8 @@ textarea.fin{min-height:84px;resize:vertical}
       <div class="lk-ic">🔒</div><h2>全部历史需最高管理权限</h2>
       <p>与小程序一致：输入最高管理密钥后可查看全部单据与统计。</p>
       <div class="lock-row">
-        <input class="inp" id="histKey" type="password" placeholder="输入管理密钥">
+        <input class="inp" id="histKey" type="text" autocomplete="off" inputmode="text" placeholder="输入管理密钥（支持中文输入法）">
+        <button class="btn ghost sm" data-act="toggleSecret" data-for="histKey">隐藏</button>
         <button class="btn primary" data-act="unlock" data-target="history">解锁</button>
         <button class="btn ghost" data-act="quickAdmin">一键体验最高管理</button>
       </div>
@@ -357,7 +361,8 @@ textarea.fin{min-height:84px;resize:vertical}
       <div class="lk-ic">🛡️</div><h2>审核端需验证身份</h2>
       <p>与小程序一致：审核员可推进流程与退回，最高管理额外拥有数据清理权限。</p>
       <div class="lock-row">
-        <input class="inp" id="audKey" type="password" placeholder="输入审核密钥">
+        <input class="inp" id="audKey" type="text" autocomplete="off" inputmode="text" placeholder="输入审核密钥（支持中文输入法）">
+        <button class="btn ghost sm" data-act="toggleSecret" data-for="audKey">隐藏</button>
         <button class="btn primary" data-act="unlock" data-target="audit">解锁</button>
         <button class="btn ghost" data-act="quickAdmin">一键体验最高管理</button>
       </div>
@@ -432,7 +437,8 @@ textarea.fin{min-height:84px;resize:vertical}
         <h3>云同步（可选 · 多端同源）</h3>
         <p>填入 HTTP 云函数网关地址与访问口令后，可上传 / 拉取同一份数据。未配置时纯本地运行，功能不受影响。</p>
         <input class="inp" id="syncUrl" placeholder="https://your-gateway.example.com">
-        <input class="inp" id="syncToken" type="password" placeholder="访问口令（保存在本地）">
+        <input class="inp" id="syncToken" type="text" autocomplete="off" inputmode="text" placeholder="访问口令（保存在本地）">
+        <div class="row" style="margin:-4px 0 8px"><button class="btn ghost sm" data-act="toggleSecret" data-for="syncToken">隐藏</button></div>
         <div class="row">
           <button class="btn ghost sm" data-act="syncTest">测试连接</button>
           <button class="btn ghost sm" data-act="syncPull">拉取云端</button>
