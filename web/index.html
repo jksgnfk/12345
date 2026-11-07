@@ -189,6 +189,25 @@ textarea.fin{min-height:84px;resize:vertical}
 .mat:last-child{border-bottom:none}
 .mat .n{word-break:break-all}
 .mat .m{font-size:12px;color:var(--text3);white-space:nowrap}
+/* 材料按板块分组 + 图片直接预览 */
+.mat-sec{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;background:var(--panel2)}
+.mat-sec-hd{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px}
+.mat-sec-n{font-size:12px;font-weight:400;color:var(--text3)}
+.mat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.mat-card{display:flex;flex-direction:column;gap:5px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel);cursor:pointer;text-align:left;color:var(--text);font:inherit;transition:border-color .15s,transform .15s}
+.mat-card:hover{border-color:var(--cyan);transform:translateY(-1px)}
+.mat-thumb{display:flex;align-items:center;justify-content:center;width:100%;height:82px;border-radius:7px;background:var(--bg);overflow:hidden}
+.mat-thumb img{width:100%;height:100%;object-fit:contain}
+.mat-loading,.mat-ph{font-size:12px;color:var(--text3)}
+.mat-name{font-size:12px;line-height:1.35;word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mat-meta{font-size:11px;color:var(--text3)}
+.modal.wide{width:min(920px,calc(100% - 28px))}
+.pv-wrap{display:flex;justify-content:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;max-height:60vh;overflow:auto}
+.pv-img{max-width:100%;max-height:56vh;object-fit:contain;display:block}
+.pv-frame{width:100%;height:56vh;border:1px solid var(--line);border-radius:10px;background:#fff}
+.pv-pre{white-space:pre-wrap;word-break:break-all;font-size:13px;line-height:1.6;max-height:56vh;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;color:var(--text)}
+.pv-ph{padding:24px;text-align:center;color:var(--text2);font-size:14px;background:var(--bg);border-radius:10px}
+@media(max-width:560px){.mat-grid{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}.mat-thumb{height:72px}}
 .rej{background:var(--red-l);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14px;color:var(--red)}
 /* 弹窗 */
 .modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,calc(100% - 28px));max-height:86vh;overflow-y:auto;background:var(--panel);border-radius:16px;z-index:25;box-shadow:0 12px 44px rgba(0,0,0,.24)}
@@ -454,7 +473,7 @@ textarea.fin{min-height:84px;resize:vertical}
 
   <footer class="ft">
     网页版 · 字段与流程口径对齐小程序 store.js（STAGES / MATNAME / TYPE_MATERIALS / MAX_FILES=50 / 30 天清理）<br>
-    数据默认保存在本浏览器，不上传任何服务器；ZIP 打包与解包均为纯前端零依赖实现（STORE + UTF-8 中文名）。
+    本地双击打开时数据仅存本浏览器；在线共享模式下，单据、公告与材料原始文件会同步到本站服务端供多端使用。ZIP 打包与解包为纯前端零依赖实现（STORE + UTF-8 中文名）。
   </footer>
 </div>
 

@@ -6,7 +6,8 @@
  * 数据文件：data/state.json（原子写入）
  * 同步语义：服务端为唯一数据源，按 id + updatedAt 做记录级合并，
  *          删除通过 tombs 墓碑传播；每次写入 rev+1，客户端轮询 rev。
- * 不上传的内容：身份/角色/密钥/未读时间戳、材料文件本体（仍在浏览器 IndexedDB）。
+ * 数据：state.json 存单据/公告元数据；data/files/ 存材料原始二进制，供多端按需取回。
+ * 不同步的内容：身份登记、角色、密钥、未读时间戳（始终只在各设备本机）。
  * ============================================================ */
 'use strict';
 
@@ -18,9 +19,12 @@ var urlLib = require('url');
 var ROOT = __dirname;
 var DATA_DIR = path.join(ROOT, 'data');
 var STATE_FILE = path.join(DATA_DIR, 'state.json');
+var FILES_DIR = path.join(DATA_DIR, 'files');   // 材料文件本体（跨设备按需取回）
 var PORT = Number(process.env.PORT) || 3000;
 var MAX_BODY = 20 * 1024 * 1024;
+var MAX_FILE = 8 * 1024 * 1024;                 // 单份材料原始字节上限
 var TOMB_TTL = 120 * 24 * 3600 * 1000;
+var KEY_RE = /^[A-Za-z0-9_-]{1,80}$/;
 
 var MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -160,6 +164,46 @@ var server = http.createServer(function (req, res) {
     if (req.method === 'OPTIONS') return json(res, 200, { ok: true });
     if (pathname === '/api/ping') {
       return json(res, 200, { ok: true, mode: 'shared', rev: readState().rev, time: Date.now() });
+    }
+    /* 材料文件本体：按 key 存取原始二进制。文件名固定 <key>.bin，
+     * 真实 MIME / 扩展名由前端按文件头判断，避免依赖上传方声明。 */
+    if (pathname === '/api/file' && req.method === 'GET') {
+      var fkey = '';
+      try { fkey = (urlLib.parse(req.url, true).query.key || ''); } catch (e) { fkey = ''; }
+      if (!KEY_RE.test(fkey)) return json(res, 400, { ok: false, msg: '非法文件 key' });
+      return fs.readFile(path.join(FILES_DIR, fkey + '.bin'), function (err, buf) {
+        if (err) return json(res, 404, { ok: false, msg: '文件不存在' });
+        res.writeHead(200, {
+          'Content-Type': 'application/octet-stream',
+          'Content-Length': buf.length,
+          'Cache-Control': 'no-store',
+          'Access-Control-Allow-Origin': '*'
+        });
+        res.end(buf);
+      });
+    }
+    if (pathname === '/api/file' && req.method === 'POST') {
+      return readBody(req, function (err, body) {
+        if (err) return json(res, 400, { ok: false, msg: err.message });
+        var key = body && body.key, data = body && body.data;
+        if (!KEY_RE.test(key || '')) return json(res, 400, { ok: false, msg: '非法文件 key' });
+        var raw;
+        try { raw = Buffer.from(String(data || ''), 'base64'); }
+        catch (e) { return json(res, 400, { ok: false, msg: '文件数据解码失败' }); }
+        if (!raw.length || raw.length > MAX_FILE) {
+          return json(res, 400, { ok: false, msg: '文件为空或超过 8 MB 上限' });
+        }
+        try { fs.mkdirSync(FILES_DIR, { recursive: true }); }
+        catch (e) { return json(res, 500, { ok: false, msg: '创建文件目录失败' }); }
+        var target = path.join(FILES_DIR, key + '.bin'), tmp = target + '.tmp';
+        return fs.writeFile(tmp, raw, function (we) {
+          if (we) return json(res, 500, { ok: false, msg: '文件写入失败' });
+          fs.rename(tmp, target, function (re) {
+            if (re) return json(res, 500, { ok: false, msg: '文件落盘失败' });
+            json(res, 200, { ok: true, key: key, size: raw.length });
+          });
+        });
+      });
     }
     if (pathname === '/api/state' && req.method === 'GET') {
       var s = readState();

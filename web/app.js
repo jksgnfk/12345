@@ -5,7 +5,8 @@
  * 数据：localStorage（元数据）+ IndexedDB（材料文件本体）。
  *      线上部署且 /api/ping 可用时自动进入「多端共享」：单据与公告走 /api/state，
  *      所有打开同一链接的设备共用一份数据；file:// 或纯静态托管自动降级为纯本地。
- *      身份 / 角色 / 密钥 / 未读时间戳 / 材料文件本体始终只留在本机。
+ *      身份 / 角色 / 密钥 / 未读时间戳始终只留在本机；材料文件本体在共享模式下
+ *      会按需上传到本站 /api/file，供其它设备预览与导出真实图片。
  * 依赖：zip.js（window.CyZip）
  * ============================================================ */
 (function () {
@@ -78,6 +79,54 @@
     var m = String(p || '').split('?')[0].match(/\.([a-zA-Z0-9]+)$/);
     return m ? m[1].toLowerCase() : 'bin';
   }
+  /* 按文件头判定真实类型：避免声明扩展名与内容不符时，图片被写成 .txt/.bin 而打不开 */
+  function sniff(buf) {
+    var b = toUint8(buf), n = b.length;
+    if (n >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47 &&
+        b[4] === 0x0D && b[5] === 0x0A && b[6] === 0x1A && b[7] === 0x0A)
+      return { mime: 'image/png', ext: 'png', image: true };
+    if (n >= 3 && b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF)
+      return { mime: 'image/jpeg', ext: 'jpg', image: true };
+    if (n >= 6 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38)
+      return { mime: 'image/gif', ext: 'gif', image: true };
+    if (n >= 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+        b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50)
+      return { mime: 'image/webp', ext: 'webp', image: true };
+    if (n >= 2 && b[0] === 0x42 && b[1] === 0x4D)
+      return { mime: 'image/bmp', ext: 'bmp', image: true };
+    if (n >= 5 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46)
+      return { mime: 'application/pdf', ext: 'pdf', image: false };
+    if (n >= 4 && b[0] === 0x50 && b[1] === 0x4B && b[2] === 0x03 && b[3] === 0x04)
+      return { mime: 'application/octet-stream', ext: 'zip', image: false };
+    return null;
+  }
+  var EXT_MIME = {
+    png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+    webp: 'image/webp', bmp: 'image/bmp', pdf: 'application/pdf',
+    txt: 'text/plain', csv: 'text/csv', json: 'application/json',
+    doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    zip: 'application/zip', bin: 'application/octet-stream'
+  };
+  function fileType(f, buf) {
+    var s = sniff(buf);
+    if (s) return s;
+    var e = String((f && f.ext) || guessExt((f && (f.path || f.name)) || '')).toLowerCase();
+    if (e === 'jpeg') e = 'jpg';
+    if (e === 'img' || !e) e = guessExt((f && (f.path || f.name)) || '');
+    return {
+      mime: EXT_MIME[e] || 'application/octet-stream',
+      ext: e || 'bin',
+      image: /^(png|jpg|gif|webp|bmp)$/.test(e)
+    };
+  }
+  function bytesToBase64(buf) {
+    var b = toUint8(buf), s = '';
+    for (var i = 0; i < b.length; i += 0x8000) {
+      s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    }
+    return btoa(s);
+  }
   function countMats(r) {
     var n = 0; Object.keys(r.materials || {}).forEach(function (k) { n += (r.materials[k] || []).length; });
     return n;
@@ -138,6 +187,9 @@
           tx.onerror = function () { memFiles.set(key, b); resolve(); };
         } catch (e) { memFiles.set(key, b); resolve(); }
       });
+    }).then(function () {
+      // 共享模式下把文件本体一并送到服务端，其它设备才能预览与导出真实图片
+      if (online && online.enabled) shareUpload(key, b).catch(function () { });
     });
   }
   function getFile(key) {
@@ -153,7 +205,44 @@
           r.onerror = function () { resolve(null); };
         } catch (e) { resolve(null); }
       });
+    }).then(function (b) {
+      if (b || !online || !online.enabled || !/^[A-Za-z0-9_-]{1,80}$/.test(key)) return b;
+      // 本机没有（记录来自其它设备）→ 按 key 向共享服务按需取回真实二进制
+      return fetch('./api/file?key=' + encodeURIComponent(key), { cache: 'no-store' })
+        .then(function (res) { return res.ok ? res.arrayBuffer() : null; })
+        .then(function (ab) {
+          if (!ab || !ab.byteLength) return null;
+          var u = toUint8(ab);
+          memFiles.set(key, u);
+          return u;
+        }).catch(function () { return null; });
     });
+  }
+  /* 首次连上共享服务时，把本机已有材料补传一次（覆盖演示数据先于连接生成的情况） */
+  function shareUpload(key, b) {
+    if (!online || !online.enabled || !/^[A-Za-z0-9_-]{1,80}$/.test(key || '')) return Promise.resolve();
+    if (!b || b.length > 8 * 1024 * 1024) return Promise.resolve();
+    try {
+      return apiFetch('./api/file', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: key, data: bytesToBase64(b) })
+      }).catch(function () { });
+    } catch (e) { return Promise.resolve(); }
+  }
+  function shareExistingFiles() {
+    if (!online || !online.enabled) return Promise.resolve();
+    var jobs = [];
+    state.records.forEach(function (r) {
+      Object.keys(r.materials || {}).forEach(function (k) {
+        (r.materials[k] || []).forEach(function (f) {
+          if (!f.key || !/^[A-Za-z0-9_-]{1,80}$/.test(f.key)) return;
+          jobs.push(getFile(f.key).then(function (b) {
+            return b ? shareUpload(f.key, b) : null;
+          }).catch(function () { }));
+        });
+      });
+    });
+    return Promise.all(jobs);
   }
   function delFile(key) {
     memFiles.delete(key);
@@ -524,7 +613,7 @@
       });
     });
     var storeLine = online.enabled
-      ? '在线共享：单据与公告存于本站服务端，多端自动同步；材料文件本体与身份/角色仍存本机。'
+      ? '在线共享：单据、公告与材料原始文件存于本站服务端，多端自动同步；身份 / 角色 / 密钥 / 未读状态仍只存本机。'
       : '存储：localStorage（元数据）+ IndexedDB（文件本体）· 数据不会自动上传任何服务器。';
     $('storeInfo').innerHTML = '单据 ' + state.records.length + ' 条 · 公告 ' + state.announcements.length +
       ' 条 · 材料 ' + files + ' 份（约 ' + (size / 1024 / 1024).toFixed(2) + ' MB）<br>' + storeLine;
@@ -576,18 +665,27 @@
       return '<li class="' + (on ? 'on ' : '') + (cur ? 'cur' : '') + '"><span class="dot"></span><div>' +
         '<div class="tx">' + esc(s.name) + '</div><div class="tm">' + esc(t || '—') + '</div></div></li>';
     }).join('') + '</ul></div>';
-    html += '<div class="sec"><h3>材料清单（' + countMats(r) + ' 份 / 上限 ' + MAX_FILES + '）</h3>';
+    html += '<div class="sec"><h3>材料清单（' + countMats(r) + ' 份 / 上限 ' + MAX_FILES + '）· 点击可直接查看</h3>';
     var keys = Object.keys(r.materials || {});
     if (!keys.length) html += '<div class="empty">暂无材料</div>';
     keys.forEach(function (k) {
-      (r.materials[k] || []).forEach(function (f) {
-        var sz = f.size ? Math.max(1, Math.round(f.size / 1024)) + ' KB' : '云端';
-        html += '<div class="mat"><span class="n">' + esc((MATNAME[k] || k) + ' · ' + f.name) + '</span>' +
-          '<span class="m">' + esc((f.ext || 'bin').toUpperCase() + ' · ' + sz) + '</span></div>';
+      var list = r.materials[k] || [];
+      if (!list.length) return;
+      html += '<div class="mat-sec"><div class="mat-sec-hd">' + esc(MATNAME[k] || k) +
+        '<span class="mat-sec-n">' + list.length + ' 份</span></div><div class="mat-grid">';
+      list.forEach(function (f, i) {
+        var sz = f.size ? Math.max(1, Math.round(f.size / 1024)) + ' KB' : '—';
+        html += '<button type="button" class="mat-card" data-act="viewMat" data-k="' + esc(k) + '" data-i="' + i + '">' +
+          '<span class="mat-thumb" data-thumb="' + esc(k) + ':' + i + '"><span class="mat-loading">…</span></span>' +
+          '<span class="mat-name">' + esc(f.name || (MATNAME[k] || k)) + '</span>' +
+          '<span class="mat-meta">' + esc((f.ext || 'bin').toUpperCase() + ' · ' + sz) + '</span>' +
+          '</button>';
       });
+      html += '</div></div>';
     });
     html += '</div>';
     $('drawerBody').innerHTML = html;
+    loadThumbs(r);
     var bar = $('drawerAuditBar');
     if (m === 'audit' && isAuditor()) {
       bar.hidden = false;
@@ -601,11 +699,79 @@
     } else { bar.hidden = true; bar.innerHTML = ''; }
     $('mask').hidden = false; $('drawer').hidden = false;
   }
-  function closeDrawer() { $('mask').hidden = true; $('drawer').hidden = true; currentId = null; }
+  /* ---------- 材料直接预览：缩略图 + 原文件查看 ---------- */
+  var thumbUrls = [];
+  function clearThumbs() {
+    thumbUrls.forEach(function (u) { try { URL.revokeObjectURL(u); } catch (e) { } });
+    thumbUrls = [];
+  }
+  function loadThumbs(r) {
+    if (!r) return;
+    clearThumbs();
+    Object.keys(r.materials || {}).forEach(function (k) {
+      (r.materials[k] || []).forEach(function (f, i) {
+        var box = document.querySelector('[data-thumb="' + k + ':' + i + '"]');
+        if (!box) return;
+        fileBuffer(f).then(function (buf) {
+          if (!buf) { box.innerHTML = '<span class="mat-ph">无本体</span>'; return; }
+          var t = fileType(f, buf);
+          if (t.image) {
+            var url = URL.createObjectURL(new Blob([buf], { type: t.mime }));
+            thumbUrls.push(url);
+            box.innerHTML = '<img src="' + url + '" alt="' + esc(f.name || '材料') + '" loading="lazy">';
+          } else {
+            box.innerHTML = '<span class="mat-ph">' + esc((t.ext || 'FILE').toUpperCase()) + '</span>';
+          }
+        }).catch(function () { box.innerHTML = '<span class="mat-ph">读取失败</span>'; });
+      });
+    });
+  }
+  function viewMat(k, i) {
+    var r = state.records.find(function (x) { return x.id === currentId; });
+    if (!r) { toast('请先打开一条单据'); return Promise.resolve(); }
+    var f = ((r.materials && r.materials[k]) || [])[i];
+    if (!f) return Promise.resolve();
+    return fileBuffer(f).then(function (buf) {
+      if (!buf) { toast('该材料暂无文件本体，可在下方「添加本地材料」补充'); return; }
+      var t = fileType(f, buf);
+      var url = URL.createObjectURL(new Blob([buf], { type: t.mime }));
+      thumbUrls.push(url);
+      var nm = sanitize((MATNAME[k] || k) + '-' + (f.name || '材料')) + '.' + t.ext;
+      var title = (MATNAME[k] || k) + ' · ' + (f.name || '材料');
+      var meta = '<p class="hint">' + esc(t.ext.toUpperCase() + ' · ' + t.mime) + ' · ' +
+        Math.max(1, Math.round(buf.length / 1024)) + ' KB · 原始文件，未转码</p>';
+      var body;
+      if (t.image) {
+        body = '<div class="pv-wrap"><img class="pv-img" src="' + url + '" alt="' + esc(title) + '"></div>' + meta;
+      } else if (t.ext === 'pdf') {
+        body = '<iframe class="pv-frame" src="' + url + '" title="' + esc(title) + '"></iframe>' + meta;
+      } else if (/^(txt|csv|json)$/.test(t.ext)) {
+        var txt = '';
+        try { txt = utf8Decode(buf).slice(0, 20000); } catch (e) { txt = '文本解码失败'; }
+        body = '<pre class="pv-pre">' + esc(txt) + '</pre>' + meta;
+      } else {
+        body = '<div class="pv-ph">该文件为 ' + esc(t.ext.toUpperCase()) +
+          ' 格式，浏览器不提供内嵌预览，请下载后用对应软件打开。</div>' + meta;
+      }
+      $('modalTitle').textContent = title;
+      $('modalBody').innerHTML = body;
+      $('modalFoot').innerHTML = '<button class="btn ghost sm" data-act="modalClose">关闭</button>' +
+        '<a class="btn primary sm" href="' + url + '" download="' + esc(nm) + '">下载原文件</a>';
+      $('modal').classList.add('wide');
+      openModal();
+    }).catch(function (e) { toast('读取材料失败：' + (e && e.message ? e.message : '未知错误')); });
+  }
+  function closeDrawer() {
+    $('mask').hidden = true; $('drawer').hidden = true;
+    clearThumbs(); currentId = null;
+  }
 
   /* ---------- 弹窗 ---------- */
   function openModal() { $('modalMask').hidden = false; $('modal').hidden = false; }
-  function closeModal() { $('modalMask').hidden = true; $('modal').hidden = true; _modalYes = null; }
+  function closeModal() {
+    $('modalMask').hidden = true; $('modal').hidden = true;
+    $('modal').classList.remove('wide'); _modalYes = null;
+  }
   function confirmDialog(title, text, onYes) {
     _modalYes = onYes;
     $('modalTitle').textContent = title;
@@ -618,7 +784,7 @@
     var u = state.user || { username: '', academy: '', dept: '' };
     $('modalTitle').textContent = '身份登记';
     $('modalBody').innerHTML =
-      '<p class="hint">用户名、书院、部门均为<b>手动填写</b>，网页版不获取任何微信资料，也不上传数据。</p>' +
+      '<p class="hint">用户名、书院、部门均为<b>手动填写</b>，网页版不获取任何微信资料；在线共享模式下，您提交的单据与材料会在本站服务端同步。</p>' +
       '<div class="frow"><label class="req">用户名</label><input class="fin" id="lgName" maxlength="40" value="' + esc(u.username) + '" placeholder="请输入姓名"></div>' +
       '<div class="frow"><label>书院</label><input class="fin" id="lgAcademy" maxlength="40" value="' + esc(u.academy) + '" placeholder="如：宸阳书院"></div>' +
       '<div class="frow"><label>部门</label><input class="fin" id="lgDept" maxlength="40" value="' + esc(u.dept) + '" placeholder="如：学生会"></div>' +
@@ -629,7 +795,7 @@
   }
   function openPrivacy() {
     var storeNote = online.enabled
-      ? '2. 当前为<b>在线共享模式</b>：您填写的单据（含提交人姓名、部门等）与公告会保存在本站服务端，并在打开同一分享链接的设备间自动同步；<b>材料文件本体、身份登记、审核密钥与未读状态仍只留在本机浏览器</b>，不会上传。'
+      ? '2. 当前为<b>在线共享模式</b>：您填写的单据（含提交人姓名、部门等）、公告，以及您添加的<b>材料原始文件（含图片）</b>会保存在本站服务端，并在打开同一分享链接的设备间自动同步，以便各设备直接预览与一键导出；<b>身份登记、审核密钥与未读状态仍只留在本机浏览器</b>，不会上传。'
       : '2. 当前为<b>纯本地模式</b>：所有数据仅保存在当前浏览器的 localStorage 与 IndexedDB 中，不会自动上传服务器；仅在您主动配置「云同步」并点击上传时才会发送到您填写的网关地址。';
     $('modalTitle').textContent = '隐私协议（网页版）';
     $('modalBody').innerHTML = '<p class="hint">1. 本网页版仅采集您<b>手动填写</b>的用户名、书院、部门，以及您主动上传的报销材料；不获取微信昵称、头像、openid 等任何微信资料。<br>' +
@@ -930,18 +1096,20 @@
     L.push('导出模式：' + mode);
     L.push('单据数量：' + list.length + ' 条');
     L.push('文件数量：' + fileCount + ' 个');
-    L.push('数据来源：本浏览器本地存储（localStorage + IndexedDB）');
+    L.push('数据来源：本地文件仓库 + 共享服务材料本体（多端共享已启用时）');
     L.push('');
     L.push('目录与命名规则');
-    L.push('  单条导出：00-单据信息.txt + 01-发票.png 等，按材料类别顺序编号');
-    L.push('  批量导出：每条单据一个子目录，根目录附 汇总.csv 与本说明');
-    L.push('  命名口径与小程序 utils/exporter.js 一致：序号-材料类别.扩展名');
+    L.push('  按材料板块分文件夹：发票/、策划案（附预算表）/、支付截图/ 等');
+    L.push('  板块文件夹内为 序号-原文件名.扩展名，例如 01-发票 1.png');
+    L.push('  单条导出：00-单据信息.txt + 各板块文件夹');
+    L.push('  批量导出：每条单据一个子目录，子目录内再按板块分文件夹；根目录附 汇总.csv 与本说明');
+    L.push('  扩展名按文件头自动校正，图片与 PDF 均为原始二进制，可直接打开，未做文本转码');
     L.push('  中文文件名使用 UTF-8 标志位，Windows / macOS 均可正常解压');
     L.push('');
     if (failures.length) {
       L.push('未能包含的文件（' + failures.length + ' 项）');
       failures.forEach(function (f) { L.push('  - ' + f); });
-      L.push('  原因：该材料仅含云端 fileID 或外部路径，本地无文件本体。');
+      L.push('  原因：该材料仅含云端 fileID 或外部路径，本机与共享服务均无文件本体。');
       L.push('  处理：在网页版详情页「添加本地材料」，或导入完整快照后再导出。');
     } else L.push('全部材料均已包含，无跳过项。');
     L.push('');
@@ -949,22 +1117,32 @@
     return L.join('\n');
   }
   function collectEntries(rec, prefix, failures) {
-    var out = [{ name: (prefix ? prefix + '/' : '') + '00-单据信息.txt', buffer: textBuffer(recordInfo(rec)) }];
-    var idx = 0;
+    var base = prefix ? prefix + '/' : '';
+    var out = [{ name: base + '00-单据信息.txt', buffer: textBuffer(recordInfo(rec)) }];
     var keys = Object.keys(rec.materials || {});
     return keys.reduce(function (chain, k) {
       return chain.then(function () {
-        return (rec.materials[k] || []).reduce(function (ch, f) {
+        // 每个材料板块一个子文件夹，文件夹名即板块中文名
+        var folder = sanitize(MATNAME[k] || k) || '材料';
+        var list = rec.materials[k] || [];
+        if (!list.length) return;
+        // 显式目录条目：保证各解压工具都能正确显示中文文件夹名
+        out.push({ name: base + folder + '/', buffer: new Uint8Array(0) });
+        var idx = 0;
+        return list.reduce(function (ch, f) {
           return ch.then(function () {
             idx++;
             return fileBuffer(f).then(function (buf) {
               if (!buf || (buf.byteLength || buf.length || 0) === 0) {
-                failures.push(rec.id + ' / ' + (MATNAME[k] || k) + ' / ' + (f.name || '文件') + '（仅含云端 fileID 或路径，无本地内容）');
+                failures.push(rec.id + ' / ' + (MATNAME[k] || k) + ' / ' + (f.name || '文件') + '（未找到文件本体）');
                 bump(); return;
               }
-              var ext = (f.ext && f.ext !== 'IMG') ? String(f.ext).toLowerCase() : (guessExt(f.path || f.name || '') || 'bin');
-              var nm = pad(idx) + '-' + sanitize(MATNAME[k] || k) + '.' + ext;
-              out.push({ name: prefix ? prefix + '/' + nm : nm, buffer: buf });
+              // 扩展名以文件头为准：PNG 就写 .png，PDF 就写 .pdf，避免被误标成文本
+              var t = fileType(f, buf);
+              var raw = sanitize(f.name || MATNAME[k] || '材料');
+              raw = raw.replace(/\.(png|jpe?g|gif|webp|bmp|pdf|txt|csv|docx?|xlsx?|zip|bin)$/i, '') || '材料';
+              var nm = folder + '/' + pad(idx) + '-' + raw + '.' + t.ext;
+              out.push({ name: base + nm, buffer: buf });
               bump();
               if (pgDone % 2 === 0) return sleep0();
             });
@@ -990,13 +1168,16 @@
       if (batch) entries.push({ name: '汇总.csv', buffer: textBuffer(buildCsv(list)) });
       setProgress(98, '正在生成 ZIP…');
       await sleep0();
-      entries.push({ name: '导出说明.txt', buffer: textBuffer(buildReadme(list, batch ? '批量导出' : '单条导出', failures, entries.length + 1)) });
+      var realCount = function () {
+        return entries.filter(function (e) { return !/\/$/.test(e.name); }).length;
+      };
+      entries.push({ name: '导出说明.txt', buffer: textBuffer(buildReadme(list, batch ? '批量导出' : '单条导出', failures, realCount() + 1)) });
       var bytes = buildZip(entries);
       var fn = batch ? ('报销材料-批量-' + dateStr() + '.zip')
         : ('报销材料-' + sanitize(list[0].reason || '单据') + '-' + sanitize(list[0].id) + '.zip');
       setProgress(100, '打包完成，正在下载');
       download(bytes, fn);
-      toast('已导出 ' + list.length + ' 条单据 / ' + entries.length + ' 个文件' +
+      toast('已导出 ' + list.length + ' 条单据 / ' + realCount() + ' 个文件' +
         (failures.length ? ('，' + failures.length + ' 项跳过（见导出说明）') : ''));
     })().catch(function (e) {
       toast('导出失败：' + (e && e.message ? e.message : '未知错误'));
@@ -1316,9 +1497,8 @@
     var el = document.activeElement;
     return !!composing || !!(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
   }
-  /* 材料文件本体不跨设备同步：远端记录带回的 key 只在原设备有效，
-   * 因此把本机已有的 key 按「单据 id + 类别 + 序号 + 文件名」还原回去，
-   * 保证本机仍能导出真实文件；其它设备的材料可用完整快照搬运。 */
+  /* 远端记录带回的 key 在原设备生成；优先还原本机已有的 key，避免重复下载。
+   * 本机没有该 key 时，getFile 会按 key 向 /api/file 取回其它设备上传的原始文件。 */
   function preserveLocalKeys(remote) {
     var map = {};
     state.records.forEach(function (r) {
@@ -1395,6 +1575,7 @@
       // 既不会让各设备各自的演示数据重复叠加，也不会抹掉本机独有的历史数据。
       return onlinePush().then(function () {
         setOnlineStatus('在线共享 ✓ 多端数据已互通（' + new Date().toLocaleTimeString('zh-CN') + '）');
+        shareExistingFiles();   // 非阻塞：补传本机材料本体，让其它设备也能预览与导出真实图片
         clearInterval(online.pollTimer);
         online.pollTimer = setInterval(onlinePoll, 6000);
         document.addEventListener('visibilitychange', function () { if (!document.hidden) onlinePoll(); });
@@ -1452,6 +1633,7 @@
         case 'modalOk': { var f = _modalYes; closeModal(); if (f) f(); break; }
         case 'open': e.stopPropagation(); openDrawer(id, currentTab === 'audit' ? 'audit' : 'track'); break;
         case 'closeDrawer': closeDrawer(); break;
+        case 'viewMat': e.stopPropagation(); viewMat(el.dataset.k, Number(el.dataset.i)); break;
         case 'exp1': {
           e.stopPropagation();
           var rid = id || currentId;
