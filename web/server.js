@@ -26,6 +26,22 @@ var MAX_FILE = 8 * 1024 * 1024;                 // 单份材料原始字节上�
 var TOMB_TTL = 120 * 24 * 3600 * 1000;
 var KEY_RE = /^[A-Za-z0-9_-]{1,80}$/;
 
+/* 客服反馈与项目组会议：独立的两个数据文件，不改动 state.json 的同步语义。
+ * 服务端只保存客服密钥的 SHA-256 摘要，明文不落任何网页文件。 */
+var crypto = require('crypto');
+var FEEDBACK_FILE = path.join(DATA_DIR, 'feedbacks.json');
+var ROOMS_FILE = path.join(DATA_DIR, 'rooms.json');
+var SERVICE_HASH = '1de3c76bbeaa58c760fd07f1e9e48d4ca3d8e05a769a5b8984e591010a51e22d';
+var PERMANENT_ROOM = '0000';
+var ROOM_TTL = 6 * 3600 * 1000;      // 6 小时无活动自动释放号码
+var ROOM_MSG_MAX = 200;               // 每个房间保留的最新消息数
+var DEMO_REC_IDS = {
+  R20261028001: 1, R20261101002: 1, R20261102003: 1,
+  R20261103004: 1, R20261104005: 1, R20261105006: 1
+};
+function isDemoRecId(id) { return !!DEMO_REC_IDS[String(id)]; }
+function isDemoAnnId(id) { return /^A_DEMO_/.test(String(id)); }
+
 var MIME = {
   '.html': 'text/html; charset=utf-8',
   '.htm': 'text/html; charset=utf-8',
@@ -96,8 +112,11 @@ function mergeState(server, body) {
   });
   return {
     rev: server.rev + 1,
-    records: mergeList(server.records, body.records, 'id', tombs),
-    announcements: mergeList(server.announcements, body.announcements, '_id', tombs),
+    /* 演示数据不再进入共享库：服务端也做一次兜底过滤，避免旧设备回灌 */
+    records: mergeList(server.records, body.records, 'id', tombs)
+      .filter(function (r) { return !isDemoRecId(r && r.id); }),
+    announcements: mergeList(server.announcements, body.announcements, '_id', tombs)
+      .filter(function (a) { return !isDemoAnnId(a && a._id); }),
     tombs: tombs,
     updatedAt: Date.now()
   };
@@ -134,6 +153,173 @@ function readBody(req, cb) {
     catch (e) { cb(new Error('JSON 解析失败')); }
   });
   req.on('error', function (e) { cb(e); });
+}
+
+/* ---------- 通用 JSON 文件读写（原子写，与 state.json 同策略） ---------- */
+function readJson(file, fallback) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { return fallback; }
+}
+function writeJson(file, obj) {
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { }
+  var tmp = file + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(obj), 'utf8');
+  fs.renameSync(tmp, file);
+}
+
+/* ---------- 客服反馈 ---------- */
+function serviceOk(key) {
+  try {
+    return crypto.createHash('sha256').update(String(key || ''), 'utf8').digest('hex') === SERVICE_HASH;
+  } catch (e) { return false; }
+}
+function feedbackItems() {
+  var j = readJson(FEEDBACK_FILE, { items: [] });
+  return (j && Array.isArray(j.items)) ? j.items : [];
+}
+function handleFeedback(body, res) {
+  var action = String((body && body.action) || 'submit');
+  var items = feedbackItems();
+  if (action === 'submit') {
+    var text = String((body && body.text) || '').trim().slice(0, 1000);
+    if (!text) return json(res, 400, { ok: false, msg: '反馈内容不能为空' });
+    var item = {
+      id: 'F' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      text: text,
+      contact: String((body && body.contact) || '').trim().slice(0, 80),
+      from: String((body && body.from) || '匿名').slice(0, 40),
+      at: Date.now(), status: 'open'
+    };
+    items.push(item);
+    if (items.length > 500) items = items.slice(-500);
+    try { writeJson(FEEDBACK_FILE, { items: items }); }
+    catch (e) { return json(res, 500, { ok: false, msg: '反馈写入失败' }); }
+    return json(res, 200, { ok: true, item: item });
+  }
+  if (!serviceOk(body && body.key)) return json(res, 403, { ok: false, msg: '客服校验未通过' });
+  if (action === 'list') return json(res, 200, { ok: true, items: items });
+  if (action === 'status') {
+    var f = items.filter(function (x) { return x && x.id === body.id; })[0];
+    if (!f) return json(res, 404, { ok: false, msg: '反馈不存在' });
+    f.status = body.status === 'done' ? 'done' : 'open';
+    try { writeJson(FEEDBACK_FILE, { items: items }); }
+    catch (e) { return json(res, 500, { ok: false, msg: '反馈写入失败' }); }
+    return json(res, 200, { ok: true, item: f });
+  }
+  return json(res, 400, { ok: false, msg: '未知操作' });
+}
+
+/* ---------- 项目组会议 ---------- */
+function roomMap() {
+  var j = readJson(ROOMS_FILE, { rooms: {} });
+  return (j && j.rooms && typeof j.rooms === 'object') ? j.rooms : {};
+}
+/* 0000 为长期房间，始终存在且不参与号池；其余房间超时自动回池 */
+function sweepRooms(rooms) {
+  var now = Date.now(), changed = false;
+  Object.keys(rooms).forEach(function (no) {
+    if (no === PERMANENT_ROOM) return;
+    var r = rooms[no];
+    if (!r || !r.no || now - (num(r.lastAt) || 0) > ROOM_TTL) { delete rooms[no]; changed = true; }
+  });
+  if (!rooms[PERMANENT_ROOM]) {
+    rooms[PERMANENT_ROOM] = {
+      no: PERMANENT_ROOM, owner: '', permanent: true,
+      createdAt: now, lastAt: now, seq: 0, messages: []
+    };
+    changed = true;
+  }
+  return changed;
+}
+function freeRoomNos(rooms) {
+  var out = [];
+  for (var i = 1; i <= 9999; i++) {
+    var no = ('000' + i).slice(-4);
+    if (!rooms[no]) out.push(no);
+  }
+  return out;
+}
+function roomPublic(r) {
+  return {
+    no: r.no, owner: r.owner || '', permanent: !!r.permanent,
+    seq: num(r.seq), createdAt: num(r.createdAt), lastAt: num(r.lastAt),
+    messages: Array.isArray(r.messages) ? r.messages : []
+  };
+}
+function validRoomNo(v) { return /^\d{4}$/.test(String(v || '')); }
+function handleRoom(body, res) {
+  var rooms = roomMap(), now = Date.now();
+  if (sweepRooms(rooms)) writeJson(ROOMS_FILE, { rooms: rooms });
+  var action = String((body && body.action) || '');
+  var no = String((body && body.no) || '');
+
+  if (action === 'list') {
+    var list = Object.keys(rooms).map(function (k) {
+      return { no: k, permanent: !!rooms[k].permanent, lastAt: num(rooms[k].lastAt) };
+    }).sort(function (a, b) { return a.no.localeCompare(b.no); });
+    return json(res, 200, { ok: true, rooms: list, free: freeRoomNos(rooms).length });
+  }
+  if (action === 'create') {
+    if (String(body.mode || '') === 'random') {
+      var pool = freeRoomNos(rooms);
+      if (!pool.length) return json(res, 409, { ok: false, msg: '房间号已用完，请稍后再试' });
+      no = pool[Math.floor(Math.random() * pool.length)];
+    }
+    if (!validRoomNo(no)) return json(res, 400, { ok: false, msg: '房间号必须是 4 位数字' });
+    if (rooms[no]) return json(res, 409, { ok: false, msg: '该房间号已被使用，请换一个或直接加入' });
+    rooms[no] = {
+      no: no, owner: String(body.owner || ''), permanent: false,
+      createdAt: now, lastAt: now, seq: 0, messages: []
+    };
+    writeJson(ROOMS_FILE, { rooms: rooms });
+    return json(res, 200, { ok: true, room: roomPublic(rooms[no]), free: freeRoomNos(rooms).length });
+  }
+  if (action === 'join' || action === 'pull' || action === 'send' || action === 'close') {
+    if (!validRoomNo(no)) return json(res, 400, { ok: false, msg: '房间号必须是 4 位数字' });
+    var r = rooms[no];
+    if (!r) return json(res, 404, { ok: false, msg: '房间不存在或会议已结束' });
+    if (action === 'join') return json(res, 200, { ok: true, room: roomPublic(r) });
+    if (action === 'pull') {
+      r.lastAt = now;                       // 心跳：表示该房间仍有人在使用
+      var since = num(body.since);
+      var msgs = (r.messages || []).filter(function (m) { return num(m.seq) > since; });
+      writeJson(ROOMS_FILE, { rooms: rooms });
+      return json(res, 200, { ok: true, seq: num(r.seq), messages: msgs, alive: true });
+    }
+    if (action === 'send') {
+      var type = body.type === 'file' ? 'file' : 'text';
+      var m = {
+        seq: num(r.seq) + 1, at: now,
+        from: String(body.from || '成员').slice(0, 40),
+        cid: String(body.cid || '').slice(0, 40),
+        type: type
+      };
+      if (type === 'file') {
+        m.file = {
+          key: String(body.key || '').slice(0, 80),
+          name: String(body.name || '文件').slice(0, 120),
+          size: num(body.size)
+        };
+        if (!KEY_RE.test(m.file.key)) return json(res, 400, { ok: false, msg: '非法文件 key' });
+      } else {
+        m.text = String(body.text || '').slice(0, 2000);
+        if (!m.text.trim()) return json(res, 400, { ok: false, msg: '消息不能为空' });
+      }
+      r.seq = m.seq; r.lastAt = now;
+      r.messages = (r.messages || []).concat([m]).slice(-ROOM_MSG_MAX);
+      writeJson(ROOMS_FILE, { rooms: rooms });
+      return json(res, 200, { ok: true, message: m });
+    }
+    if (action === 'close') {
+      if (r.permanent) return json(res, 403, { ok: false, msg: '0000 为长期房间，不能关闭' });
+      if (!r.owner || String(body.owner || '') !== r.owner) {
+        return json(res, 403, { ok: false, msg: '仅会议发起人可关闭房间' });
+      }
+      delete rooms[no];
+      writeJson(ROOMS_FILE, { rooms: rooms });
+      return json(res, 200, { ok: true, released: no, free: freeRoomNos(rooms).length });
+    }
+  }
+  return json(res, 400, { ok: false, msg: '未知操作' });
 }
 
 function serveStatic(pathname, res) {
@@ -203,6 +389,20 @@ var server = http.createServer(function (req, res) {
             json(res, 200, { ok: true, key: key, size: raw.length });
           });
         });
+      });
+    }
+    if (pathname === '/api/feedback' && req.method === 'POST') {
+      return readBody(req, function (err, body) {
+        if (err) return json(res, 400, { ok: false, msg: err.message });
+        try { return handleFeedback(body, res); }
+        catch (e) { return json(res, 500, { ok: false, msg: '反馈服务异常：' + e.message }); }
+      });
+    }
+    if (pathname === '/api/room' && req.method === 'POST') {
+      return readBody(req, function (err, body) {
+        if (err) return json(res, 400, { ok: false, msg: err.message });
+        try { return handleRoom(body, res); }
+        catch (e) { return json(res, 500, { ok: false, msg: '会议服务异常：' + e.message }); }
       });
     }
     if (pathname === '/api/state' && req.method === 'GET') {

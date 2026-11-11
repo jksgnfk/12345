@@ -39,7 +39,7 @@
   var TYPES = ['活动', '采购', '差旅', '培训', '其他'];
   var MAX_FILES = 50;
   var EXPIRE_MS = 30 * 24 * 3600 * 1000;
-  var ADMIN_KEY = '社畜', AUDIT_KEY = '天选打工人';
+  /* 权限密钥只以 SHA-256 摘要形式存在（见下方 KEY_HASH），不保留明文 */
   var K_STATE = 'cy_web_v2_state', K_THEME = 'cy_web_v2_theme';
 
   function getMaterials(type, clothing) {
@@ -466,112 +466,103 @@
     } catch (e) { return false; }
   }
 
-  /* ---------- 演示数据（字段与小程序 submit.js 一致） ---------- */
-  function mkDemo() {
-    var DAY = 86400000, now = Date.now();
-    var defs = [
-      { id: 'R20261028001', reason: '迎新晚会物资采购', name: '张三', dept: '学生会', type: '活动', total: 1280.50, pay: 0, stage: 4, days: 10, mats: { invoice: 2, plan: 1, pay: 1, purchase: 1 }, note: '舞台装饰、道具与耗材' },
-      { id: 'R20261101002', reason: '社团骨干培训资料打印', name: '李悦', dept: '项目部', type: '培训', total: 356.00, pay: 0, stage: 1, days: 6, mats: { invoice: 1, plan: 1, pay: 1 }, note: '培训手册 40 份' },
-      { id: 'R20261102003', reason: '赴杭参赛差旅报销', name: '王浩', dept: '外联部', type: '差旅', total: 892.00, pay: 1, stage: 2, days: 5, mats: { invoice: 2, pay: 1, proof: 1 }, note: '高铁往返 + 住宿两晚' },
-      { id: 'R20261103004', reason: '办公室耗材采购', name: '陈曦', dept: '办公室', type: '采购', total: 214.80, pay: 0, stage: 0, days: 4, mats: { invoice: 1, pay: 1, purchase: 1 }, note: '' },
-      { id: 'R20261104005', reason: '志愿者服装采购', name: '赵宁', dept: '文艺部', type: '采购', total: 1680.00, pay: 4, stage: 1, days: 3, mats: { invoice: 1, claim: 1, pay: 1 }, note: '含服装领用清单', rejected: true, rejectReason: '发票缺少购买方抬头，请补充后重新提交。' },
-      { id: 'R20261105006', reason: '讲座嘉宾接待费用', name: '孙淼', dept: '学术部', type: '其他', total: 480.00, pay: 0, stage: 3, days: 2, mats: { invoice: 1, pay: 1, other: 1 }, note: '含签到表扫描件' }
-    ];
-    return defs.map(function (d) {
-      var createdAt = now - d.days * DAY, materials = {};
-      Object.keys(d.mats).forEach(function (k) {
-        materials[k] = Array.from({ length: d.mats[k] }, function (_, i) {
-          return {
-            type: (k === 'plan' || k === 'claim' || k === 'other') ? 'file' : 'image',
-            name: MATNAME[k] + ' ' + (i + 1),
-            ext: (k === 'plan' || k === 'other') ? 'txt' : (k === 'claim' ? 'csv' : 'png'),
-            path: '', fileID: 'demo://' + d.id + '/' + k + '/' + i, key: '', size: 0
-          };
-        });
-      });
-      var stageLog = {};
-      for (var s = 0; s <= d.stage; s++) stageLog[s] = createdAt + s * DAY;
-      return {
-        id: d.id, userId: d.name, name: d.name, sid: '', academy: '宸阳书院', dept: d.dept, phone: '',
-        reason: d.reason, type: d.type, payMethod: PAY_METHODS[d.pay], clothing: false, total: d.total,
-        note: d.note, materials: materials, stage: d.stage, rejected: !!d.rejected,
-        rejectReason: d.rejectReason || '', rejectAt: d.rejected ? createdAt + DAY : 0,
-        rejectBy: d.rejected ? '审核员' : '', rejectLog: [],
-        stageLog: stageLog, createdAt: createdAt, updatedAt: createdAt + d.stage * DAY
-      };
-    });
+  /* ---------- 权限密钥：前端仅保存摘要，界面与源码均不出现明文 ---------- */
+  var KEY_HASH = {
+    admin: '183f972c7a85d68def4902d437b355c4789698ed5bf8d9d9806b65d9caa59ef7',
+    audit: 'e2cc1194785e6353b454b81a6c5fe21957fe080c7c9048703831c3201137cf77'
+  };
+  /* 同步 SHA-256（纯 JS，file:// 下也可用）：把输入与本地摘要比对，避免明文落盘 */
+  var K256 = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+  ];
+  function rotr32(x, n) { return (x >>> n) | (x << (32 - n)); }
+  function sha256(msg) {
+    var raw = unescape(encodeURIComponent(String(msg || ''))), bytes = [], i, t;
+    for (i = 0; i < raw.length; i++) bytes.push(raw.charCodeAt(i) & 255);
+    var bits = bytes.length * 8;
+    bytes.push(0x80);
+    while (bytes.length % 64 !== 56) bytes.push(0);
+    bytes.push(0, 0, 0, 0);
+    bytes.push((bits >>> 24) & 255, (bits >>> 16) & 255, (bits >>> 8) & 255, bits & 255);
+    var H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+             0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+    for (var off = 0; off < bytes.length; off += 64) {
+      var w = new Array(64);
+      for (t = 0; t < 16; t++) {
+        w[t] = ((bytes[off + 4 * t] << 24) | (bytes[off + 4 * t + 1] << 16) |
+                (bytes[off + 4 * t + 2] << 8) | bytes[off + 4 * t + 3]) >>> 0;
+      }
+      for (t = 16; t < 64; t++) {
+        var s0 = rotr32(w[t - 15], 7) ^ rotr32(w[t - 15], 18) ^ (w[t - 15] >>> 3);
+        var s1 = rotr32(w[t - 2], 17) ^ rotr32(w[t - 2], 19) ^ (w[t - 2] >>> 10);
+        w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
+      }
+      var a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+      for (t = 0; t < 64; t++) {
+        var S1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
+        var ch = (e & f) ^ ((~e) & g);
+        var t1 = (h + S1 + ch + K256[t] + w[t]) >>> 0;
+        var S0 = rotr32(a, 2) ^ rotr32(a, 13) ^ rotr32(a, 22);
+        var maj = (a & b) ^ (a & c) ^ (b & c);
+        var t2 = (S0 + maj) >>> 0;
+        h = g; g = f; f = e; e = (d + t1) >>> 0;
+        d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      H[0] = (H[0] + a) >>> 0; H[1] = (H[1] + b) >>> 0;
+      H[2] = (H[2] + c) >>> 0; H[3] = (H[3] + d) >>> 0;
+      H[4] = (H[4] + e) >>> 0; H[5] = (H[5] + f) >>> 0;
+      H[6] = (H[6] + g) >>> 0; H[7] = (H[7] + h) >>> 0;
+    }
+    return H.map(function (x) { return ('00000000' + x.toString(16)).slice(-8); }).join('');
   }
-  function mkDemoAnnouncements() {
-    var now = Date.now(), D = 86400000;
-    return [
-      { _id: 'A_DEMO_1', title: '关于 11 月报销材料提交规范的通知', content: '一、发票需填写完整购买方抬头与纳税人识别号。\n二、活动策划案须附预算表，支付截图需清晰可辨。\n三、单笔最多提交 50 份材料，请按需整理后上传。', pinned: true, createdAt: now - 2 * D, updatedAt: now - 2 * D },
-      { _id: 'A_DEMO_2', title: '计财处月末结账时间提醒', content: '本月最后三个工作日暂停接收新的报销单，请各项目组提前安排提交时间。', pinned: false, createdAt: now - D, updatedAt: now - D }
-    ];
-  }
-
-  /* 演示材料生成：让导出包内含真实可打开的文件 */
-  function pngBuffer(lines) {
-    return new Promise(function (resolve) {
-      try {
-        var c = document.createElement('canvas'); c.width = 720; c.height = 420;
-        var g = c.getContext('2d');
-        g.fillStyle = '#ffffff'; g.fillRect(0, 0, 720, 420);
-        g.strokeStyle = '#1faa6b'; g.lineWidth = 5; g.strokeRect(14, 14, 692, 392);
-        g.fillStyle = '#1faa6b'; g.fillRect(14, 14, 692, 62);
-        g.fillStyle = '#ffffff'; g.font = '500 24px "PingFang SC","Microsoft YaHei",sans-serif';
-        g.fillText('宸阳书院报销系统 · 材料示意', 36, 55);
-        g.fillStyle = '#16352a'; g.font = '500 27px "PingFang SC","Microsoft YaHei",sans-serif';
-        g.fillText(lines[0] || '', 40, 128);
-        g.font = '17px "PingFang SC","Microsoft YaHei",sans-serif'; g.fillStyle = '#5b7a6c';
-        (lines.slice(1) || []).forEach(function (t, i) { g.fillText(t, 40, 172 + i * 32); });
-        g.fillStyle = '#9ab5a7'; g.font = '14px sans-serif';
-        g.fillText('离线演示数据 · 非真实票据', 40, 382);
-        c.toBlob(function (b) {
-          if (!b) { resolve(textBuffer('图片生成失败')); return; }
-          b.arrayBuffer().then(resolve).catch(function () { resolve(textBuffer('图片生成失败')); });
-        }, 'image/png');
-      } catch (e) { resolve(textBuffer('图片生成失败：' + e.message)); }
-    });
-  }
-  function materialBuffer(rec, key, f) {
-    if (f.ext === 'png') return pngBuffer([
-      (MATNAME[key] || key) + ' · ' + f.name,
-      '单据编号：' + rec.id, '报销事由：' + rec.reason,
-      '提交人：' + rec.name + '（' + rec.dept + '）',
-      '报销金额：' + fmtMoney(rec.total), '材料类别：' + (MATNAME[key] || key)
-    ]);
-    if (f.ext === 'csv') return Promise.resolve(textBuffer('\uFEFF序号,物品,数量,领用人\n1,志愿者上衣,20,赵宁\n2,志愿者帽子,20,赵宁\n'));
-    return Promise.resolve(textBuffer(
-      '宸阳书院报销系统 · ' + (MATNAME[key] || key) + '\n' +
-      '----------------------------------------\n' +
-      '单据编号：' + rec.id + '\n报销事由：' + rec.reason + '\n' +
-      '提交人：' + rec.name + '（' + rec.dept + '）\n报销类型：' + rec.type + '\n' +
-      '报销金额：' + fmtMoney(rec.total) + '\n材料名称：' + f.name + '\n' +
-      '----------------------------------------\n本文件为离线演示数据，用于验证网页版一键导出功能。\n'
-    ));
-  }
-  function seedDemo() {
-    state.records = mkDemo();
-    state.announcements = mkDemoAnnouncements();
-    state.lastRead = 0;
-    var jobs = [];
-    state.records.forEach(function (rec) {
-      Object.keys(rec.materials || {}).forEach(function (k) {
-        (rec.materials[k] || []).forEach(function (f) {
-          jobs.push(materialBuffer(rec, k, f).then(function (buf) {
-            var key = uid();
-            return putFile(key, buf).then(function () {
-              f.key = key;
-              f.size = buf.byteLength || buf.length || 0;
-            });
-          }));
-        });
-      });
-    });
-    return Promise.all(jobs).then(function () { saveState(); });
+  function keyRole(input) {
+    var h = sha256(String(input || '').trim());
+    if (h === KEY_HASH.admin) return 'admin';
+    if (h === KEY_HASH.audit) return 'audit';
+    return null;
   }
 
-  /* ---------- 筛选 ---------- */
+  /* ---------- 演示数据清理：一次性移除历史遗留的演示单据 / 公告 ---------- */
+  var DEMO_REC_IDS = {
+    R20261028001: 1, R20261101002: 1, R20261102003: 1,
+    R20261103004: 1, R20261104005: 1, R20261105006: 1
+  };
+  function isDemoRec(r) {
+    if (!r) return false;
+    if (DEMO_REC_IDS[String(r.id)]) return true;
+    var mats = r.materials || {};
+    return Object.keys(mats).some(function (k) {
+      return (mats[k] || []).some(function (f) {
+        return f && String(f.fileID || '').indexOf('demo://') === 0;
+      });
+    });
+  }
+  function isDemoAnn(a) { return !!a && /^A_DEMO_/.test(String(a._id || '')); }
+  /* 返回是否清理了内容；调用方负责 saveState()，墓碑会把删除同步到其它设备 */
+  function stripDemoData() {
+    var removed = [], now = Date.now();
+    state.records = state.records.filter(function (r) {
+      if (isDemoRec(r)) { removed.push(String(r.id)); return false; }
+      return true;
+    });
+    state.announcements = state.announcements.filter(function (a) {
+      if (isDemoAnn(a)) { removed.push(String(a._id)); return false; }
+      return true;
+    });
+    if (!removed.length) return false;
+    removed.forEach(function (id) { state.tombs[id] = now; });
+    selected.clear();
+    return true;
+  }
+
+  /* ---------- 筛选 ---------- */  /* ---------- 筛选 ---------- */
   function workFiltered() {
     var q = ($('wSearch').value || '').trim().toLowerCase();
     var st = $('wStage').value, ty = $('wType').value;
@@ -769,7 +760,7 @@
   var adminSelected = new Set();
   function unlockDataAdmin() {
     var key = (($('dataAdminKey').value) || '').trim();
-    if (key !== ADMIN_KEY) { toast('密钥错误，仅最高管理可删除项目'); return; }
+    if (keyRole(key) !== 'admin') { toast('密钥错误，仅最高管理可删除项目'); return; }
     state.role = 'admin'; $('dataAdminKey').value = '';
     saveState(); renderAll(); toast('已解锁最高管理：可删除项目');
   }
@@ -822,9 +813,287 @@
     doDeleteRecords(state.records.filter(function (r) { return adminSelected.has(r.id); }), '批量选中项目');
   }
 
+  /* ============================================================
+   * 客服反馈：用户提交 / 客服凭密钥查看（密钥只在服务端校验，前端零明文）
+   * ============================================================ */
+  var K_FB_MINE = 'cy_web_my_feedback';
+  var service = { on: false, key: '', items: [] };
+  function apiPostTo(p, body) {
+    return apiFetch(p, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  }
+  function myFeedback() {
+    try { return JSON.parse(localStorage.getItem(K_FB_MINE) || '[]') || []; } catch (e) { return []; }
+  }
+  function svcView(id) {
+    ['serviceUserView', 'serviceUnlockView', 'serviceAdminView'].forEach(function (k) {
+      if ($(k)) $(k).hidden = k !== id;
+    });
+  }
+  function serviceUnlockOpen() { if ($('svcKey')) $('svcKey').value = ''; svcView('serviceUnlockView'); }
+  function serviceLogout() {
+    service.on = false; service.key = ''; service.items = [];
+    svcView('serviceUserView'); renderService();
+  }
+  function feedbackLoad() {
+    return apiPostTo('./api/feedback', { action: 'list', key: service.key })
+      .then(function (j) { service.items = j.items || []; });
+  }
+  function serviceUnlock() {
+    if (!online.enabled) { toast('客服端需在在线共享链接下使用'); return; }
+    var key = (($('svcKey').value || '').trim());
+    if (!key) { toast('请输入客服密钥'); return; }
+    service.key = key;
+    return feedbackLoad().then(function () {
+      service.on = true; $('svcKey').value = '';
+      svcView('serviceAdminView'); renderService(); toast('已进入客服工作台');
+    }).catch(function (e) { service.key = ''; toast('客服校验失败：' + e.message); });
+  }
+  function fbSubmit() {
+    if (!online.enabled) { toast('提交反馈需在在线共享链接下使用'); return; }
+    var text = (($('fbText').value || '').trim());
+    if (!text) { toast('请填写反馈内容'); return; }
+    return apiPostTo('./api/feedback', {
+      action: 'submit', text: text,
+      contact: (($('fbContact').value || '').trim()),
+      from: (state.user && state.user.username) || '匿名'
+    }).then(function (j) {
+      $('fbText').value = ''; $('fbContact').value = '';
+      var a = myFeedback(); a.push(j.item);
+      try { localStorage.setItem(K_FB_MINE, JSON.stringify(a.slice(-20))); } catch (e) { }
+      renderService(); toast('反馈已提交，感谢你的意见');
+    }).catch(function (e) { toast('提交失败：' + e.message); });
+  }
+  function fbStatus(id, status) {
+    apiPostTo('./api/feedback', { action: 'status', key: service.key, id: id, status: status })
+      .then(feedbackLoad).then(renderService)
+      .catch(function (e) { toast('操作失败：' + e.message); });
+  }
+  function renderService() {
+    var mine = $('fbMine');
+    if (mine) {
+      var a = myFeedback().slice(-3).reverse();
+      mine.innerHTML = a.length ? '<b>我最近提交的反馈</b><br>' + a.map(function (x) {
+        return esc(fmtTime(x.at)) + ' · ' + esc(String(x.text || '').slice(0, 60));
+      }).join('<br>') : '';
+    }
+    if (!service.on || !$('fbList')) return;
+    $('svcCount').textContent = '共 ' + service.items.length + ' 条 · 待处理 ' +
+      service.items.filter(function (x) { return x.status !== 'done'; }).length + ' 条';
+    $('fbList').innerHTML = service.items.length ? service.items.slice().reverse().map(function (x) {
+      var done = x.status === 'done';
+      return '<div class="fb-item ' + (done ? 'done' : '') + '">' +
+        '<div class="fb-hd"><span>' + esc(x.from || '匿名') +
+        (x.contact ? ' · ' + esc(x.contact) : '') + '</span><span>' + esc(fmtTime(x.at)) + '</span></div>' +
+        '<div class="fb-body">' + esc(x.text) + '</div>' +
+        '<div class="fb-foot"><span class="tag ' + (done ? 's4' : 's1') + '">' +
+        (done ? '已处理' : '待处理') + '</span>' +
+        '<button class="btn ghost sm" data-act="fbStatus" data-id="' + esc(x.id) + '" data-status="' +
+        (done ? 'open' : 'done') + '">' + (done ? '重新打开' : '标记已处理') + '</button></div></div>';
+    }).join('') : '<div class="empty">暂无反馈</div>';
+  }
+
+  /* ============================================================
+   * 项目组会议：四位房间号、0000 长期保留、关闭后号码回池、文字与文件实时同步
+   * ============================================================ */
+  var K_ROOM = 'cy_web_room_session', K_CID = 'cy_web_client_id', ROOM_UI_MAX = 120;
+  var room = { no: '', owner: '', seq: 0, msgs: [], timer: null, busy: false };
+  function clientId() {
+    var v = '';
+    try { v = localStorage.getItem(K_CID) || ''; } catch (e) { }
+    if (!v) {
+      v = 'U' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      try { localStorage.setItem(K_CID, v); } catch (e) { }
+    }
+    return v;
+  }
+  function roomSave() {
+    try {
+      localStorage.setItem(K_ROOM, JSON.stringify({
+        no: room.no, owner: room.owner, seq: room.seq, msgs: room.msgs.slice(-ROOM_UI_MAX)
+      }));
+    } catch (e) { }
+  }
+  function roomRestore() {
+    try {
+      var j = JSON.parse(localStorage.getItem(K_ROOM) || 'null');
+      if (j && /^\d{4}$/.test(j.no)) {
+        room.no = j.no; room.owner = j.owner || '';
+        room.seq = Number(j.seq) || 0;
+        room.msgs = Array.isArray(j.msgs) ? j.msgs.slice(-ROOM_UI_MAX) : [];
+      }
+    } catch (e) { }
+  }
+  function roomCall(body) { return apiPostTo('./api/room', body); }
+  function roomStopPoll() { if (room.timer) { clearInterval(room.timer); room.timer = null; } }
+  function roomStartPoll() {
+    roomStopPoll();
+    if (!room.no || !online.enabled) return;
+    room.timer = setInterval(function () {
+      if (currentTab === 'room' && !room.busy) roomPull();
+    }, 2000);
+  }
+  function roomLeave() {
+    room.no = ''; room.owner = ''; room.seq = 0; room.msgs = [];
+    try { localStorage.removeItem(K_ROOM); } catch (e) { }
+    roomStopPoll(); renderRoom();
+  }
+  function roomPull() {
+    if (!room.no || room.busy || !online.enabled) return;
+    room.busy = true;
+    roomCall({ action: 'pull', no: room.no, since: room.seq }).then(function (j) {
+      room.busy = false;
+      if (!room.no) return;
+      if (j.messages && j.messages.length) {
+        room.msgs = room.msgs.concat(j.messages).slice(-ROOM_UI_MAX);
+        room.seq = Math.max(room.seq, Number(j.seq) || 0);
+        roomSave(); renderRoomMsgs();
+      }
+    }).catch(function (e) {
+      room.busy = false;
+      if (/不存在|已结束/.test(e.message || '')) { roomLeave(); toast('会议已结束，房间号已回收'); }
+    });
+  }
+  function roomCreate(mode) {
+    if (!online.enabled) { toast('项目组会议需在在线共享链接下使用'); return; }
+    var no = mode === 'random' ? '' : (($('roomCreateNo').value || '').trim());
+    if (mode !== 'random' && !/^\d{4}$/.test(no)) { toast('请输入 4 位数字房间号'); return; }
+    return roomCall({ action: 'create', mode: mode, no: no, owner: clientId() }).then(function (j) {
+      $('roomCreateNo').value = '';
+      room.no = j.room.no; room.owner = clientId();
+      room.seq = Number(j.room.seq) || 0; room.msgs = [];
+      roomSave(); renderRoom(); roomStartPoll();
+      toast('会议已创建，房间号 ' + j.room.no + '，可复制发给成员');
+    }).catch(function (e) { toast('创建失败：' + e.message); });
+  }
+  function roomJoin(prefill) {
+    if (!online.enabled) { toast('项目组会议需在在线共享链接下使用'); return; }
+    var no = String(prefill != null ? prefill : (($('roomJoinNo').value || '').trim()));
+    if (!/^\d{4}$/.test(no)) { toast('请输入 4 位数字房间号'); return; }
+    roomCall({ action: 'join', no: no }).then(function (j) {
+      room.no = j.room.no;
+      room.owner = (j.room.owner && j.room.owner === clientId()) ? clientId() : '';
+      room.seq = Number(j.room.seq) || 0;
+      room.msgs = (j.room.messages || []).slice(-ROOM_UI_MAX);
+      roomSave(); renderRoom(); roomStartPoll();
+      toast('已加入房间 ' + no);
+    }).catch(function (e) { toast('加入失败：' + e.message); });
+  }
+  function roomClose() {
+    if (!room.no) return;
+    if (room.no === '0000') { toast('0000 为长期房间，不能关闭'); return; }
+    if (!room.owner) { toast('仅会议发起人可关闭房间'); return; }
+    confirmDialog('关闭会议', '关闭后房间 ' + room.no + ' 会立即释放，号码回到可分配池。', function () {
+      roomCall({ action: 'close', no: room.no, owner: clientId() }).then(function () {
+        var n = room.no; roomLeave(); toast('会议 ' + n + ' 已关闭，号码已回收');
+      }).catch(function (e) { toast('关闭失败：' + e.message); });
+    });
+  }
+  function roomSend() {
+    if (!room.no || !online.enabled) return;
+    var el = $('roomText'), text = (el.value || '').trim();
+    if (!text) return;
+    el.value = '';
+    return roomCall({
+      action: 'send', no: room.no, from: (state.user && state.user.username) || '成员',
+      cid: clientId(), type: 'text', text: text
+    }).then(function (j) {
+      room.msgs.push(j.message);
+      room.seq = Math.max(room.seq, Number(j.message.seq) || 0);
+      room.msgs = room.msgs.slice(-ROOM_UI_MAX);
+      roomSave(); renderRoomMsgs();
+    }).catch(function (e) { el.value = text; toast('发送失败：' + e.message); });
+  }
+  function roomSendFile(file) {
+    if (!file || !room.no || !online.enabled) return;
+    if (file.size > 8 * 1024 * 1024) { toast('单个文件不能超过 8 MB'); return; }
+    file.arrayBuffer().then(function (buf) {
+      var key = 'rm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+      return fetch('./api/file', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: key, data: bytesToBase64(new Uint8Array(buf)) })
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        if (!j.ok) throw new Error(j.msg || '文件写入失败');
+        return roomCall({
+          action: 'send', no: room.no, from: (state.user && state.user.username) || '成员',
+          cid: clientId(), type: 'file', key: key, name: file.name, size: file.size
+        });
+      });
+    }).then(function (j) {
+      room.msgs.push(j.message);
+      room.seq = Math.max(room.seq, Number(j.message.seq) || 0);
+      room.msgs = room.msgs.slice(-ROOM_UI_MAX);
+      roomSave(); renderRoomMsgs(); toast('文件已发送到会议');
+    }).catch(function (e) { toast('文件发送失败：' + e.message); });
+  }
+  function roomDownload(key, name) {
+    fetch('./api/file?key=' + encodeURIComponent(key), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then(function (buf) { download(new Uint8Array(buf), name || '会议文件', 'application/octet-stream'); })
+      .catch(function (e) { toast('下载失败：' + e.message); });
+  }
+  function roomCopy() {
+    var n = room.no;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(n).then(function () { toast('房间号 ' + n + ' 已复制'); })
+        .catch(function () { toast('房间号：' + n); });
+    } else { toast('房间号：' + n); }
+  }
+  function renderRoomMsgs() {
+    var box = $('roomMsgs'); if (!box) return;
+    var cid = clientId();
+    box.innerHTML = room.msgs.length ? room.msgs.map(function (m) {
+      var me = m.cid && m.cid === cid;
+      var body = m.type === 'file'
+        ? '<span class="filelink" data-act="roomDownload" data-key="' + esc(m.file.key) +
+          '" data-name="' + esc(m.file.name) + '">📎 ' + esc(m.file.name) + '（' +
+          Math.round((Number(m.file.size) || 0) / 1024) + ' KB）</span>'
+        : esc(m.text);
+      return '<div class="rmsg ' + (me ? 'me' : '') + '"><div class="bubble">' + body + '</div>' +
+        '<div class="meta">' + esc(m.from || '成员') + ' · ' + esc(fmtTime(m.at)) + '</div></div>';
+    }).join('') : '<div class="empty">还没有消息，发一条开始同步进度吧</div>';
+    box.scrollTop = box.scrollHeight;
+  }
+  function renderRoomView() {
+    var lobby = $('roomLobby'), meeting = $('roomMeeting');
+    if (!lobby || !meeting) return;
+    lobby.hidden = !!room.no; meeting.hidden = !room.no;
+    if (!room.no) {
+      if (!online.enabled && $('roomFreeHint')) {
+        $('roomFreeHint').textContent = '当前为离线模式：项目组会议需在在线共享链接下使用。';
+      }
+      return;
+    }
+    $('roomMeetingNo').textContent = room.no;
+    $('roomMeetingSub').textContent = room.no === '0000'
+      ? '长期房间 · 任何人可随时加入 · 消息实时同步'
+      : (room.owner ? '我是发起人 · 可关闭会议释放号码' : '成员 · 消息实时同步');
+    if ($('roomCloseBtn')) $('roomCloseBtn').hidden = (room.no === '0000' || !room.owner);
+    renderRoomMsgs();
+  }
+  function roomList() {
+    if (!online.enabled) return;
+    roomCall({ action: 'list' }).then(function (j) {
+      if ($('roomFreeHint')) {
+        $('roomFreeHint').textContent = '剩余可分配号码 ' + j.free + ' 个 · 0000 为长期保留房间';
+      }
+      var arr = (j.rooms || []).slice(0, 40);
+      if ($('roomActiveList')) {
+        $('roomActiveList').innerHTML = arr.length ? arr.map(function (r) {
+          return '<button class="room-pill" data-act="roomJoin" data-id="' + esc(r.no) + '">' +
+            esc(r.no) + (r.permanent ? ' · 长期' : '') + '</button>';
+        }).join('') : '<div class="hint">暂无进行中的会议</div>';
+      }
+    }).catch(function () { });
+  }
+  function renderRoom() { renderRoomView(); if (!room.no) roomList(); }
+
   function renderAll() {
     renderHeader(); renderWork(); renderSubmit(); renderTrack();
     renderHistory(); renderAudit(); renderAnnounce(); renderData(); renderBadges();
+    renderRoomView(); renderService();
   }
 
   function switchTab(tab) {
@@ -836,6 +1105,8 @@
     var p = $('page-' + tab); if (p) p.hidden = false;
     document.querySelectorAll('.tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
     renderAll();
+    if (tab === 'room') { roomList(); roomStartPoll(); } else roomStopPoll();
+    if (tab === 'service' && service.on) feedbackLoad().then(renderService).catch(function () { });
     try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
   }
 
@@ -1029,15 +1300,15 @@
   }
   function logout() { state.user = null; saveState(); closeModal(); renderAll(); toast('已退出登录'); }
 
-  /* ---------- 角色解锁 ---------- */
+  /* ---------- 角色解锁（仅比对摘要，密钥明文不在网页中出现） ---------- */
   function unlock(target) {
-    var key = ((target === 'history' ? $('histKey').value : $('audKey').value) || '').trim();
-    var role = key === ADMIN_KEY ? 'admin' : (key === AUDIT_KEY ? 'audit' : null);
+    var input = $(target === 'history' ? 'histKey' : 'audKey');
+    var role = keyRole((input && input.value) || '');
     if (!role) { toast('密钥错误，请重新输入'); return; }
     if (target === 'history' && role !== 'admin') { toast('全部历史需最高管理密钥'); return; }
+    if (input) input.value = '';
     state.role = role; saveState(); renderAll(); toast('已解锁：' + roleLabel(role));
   }
-  function quickAdmin() { state.role = 'admin'; saveState(); renderAll(); toast('已切换为最高管理（本地演示）'); }
   function roleLogout() { state.role = null; saveState(); renderAll(); toast('已退出审核角色'); }
 
   /* ---------- 提交端 ---------- */
@@ -1563,17 +1834,6 @@
       });
     });
   }
-  function resetDemo() {
-    confirmDialog('重置演示数据', '将用内置演示数据覆盖当前所有内容。', function () {
-      Promise.all(state.records.map(releaseRecordFiles)).then(function () {
-        state.records = []; state.announcements = []; selected.clear();
-        showProgress('正在准备演示数据…');
-        return seedDemo();
-      }).then(function () {
-        renderAll(); hideProgress(); toast('已重置为演示数据');
-      }).catch(function (e) { hideProgress(); toast('重置失败：' + e.message); });
-    });
-  }
 
   /* ---------- 云同步（可选，对应多端方案 L1 的网关契约） ---------- */
   function syncCfg() {
@@ -1740,10 +2000,13 @@
     online.applying = true;
     try {
       online.rev = Number(j.rev) || 0;
-      var next = (Array.isArray(j.records) ? j.records : []).map(normalizeRecord).filter(Boolean);
+      var next = (Array.isArray(j.records) ? j.records : []).map(normalizeRecord)
+        .filter(function (r) { return r && !isDemoRec(r); });
       preserveLocalKeys(next);
       state.records = next;
-      if (Array.isArray(j.announcements)) state.announcements = j.announcements;
+      if (Array.isArray(j.announcements)) {
+        state.announcements = j.announcements.filter(function (a) { return !isDemoAnn(a); });
+      }
       if (j.tombs && typeof j.tombs === 'object') state.tombs = j.tombs;
       selected.clear();
       saveState();
@@ -1792,6 +2055,7 @@
       return onlinePush().then(function () {
         setOnlineStatus('在线共享 ✓ 多端数据已互通（' + new Date().toLocaleTimeString('zh-CN') + '）');
         shareExistingFiles();   // 非阻塞：补传本机材料本体，让其它设备也能预览与导出真实图片
+        if (currentTab === 'room') { roomList(); roomStartPoll(); }
         clearInterval(online.pollTimer);
         online.pollTimer = setInterval(onlinePoll, 6000);
         document.addEventListener('visibilitychange', function () { if (!document.hidden) onlinePoll(); });
@@ -1831,7 +2095,7 @@
     var act = el.dataset.act, id = el.dataset.id;
     try {
       /* 下载类操作：在用户手势内准备桌面目录，download() 会等授权完成后再写文件 */
-      if (/^(exp1|exportSel|exportAll|exportJSON|exportSnap|downloadOrig)$/.test(act)) prepareDownloadDir();
+      if (/^(exp1|exportSel|exportAll|exportJSON|exportSnap|downloadOrig|roomDownload)$/.test(act)) prepareDownloadDir();
       switch (act) {
         case 'tab': switchTab(el.dataset.tab); break;
         case 'theme': toggleTheme(); break;
@@ -1865,7 +2129,6 @@
         case 'submitReset': resetForm(); toast('表单已重置'); break;
         case 'delMat': delMat(el.dataset.key, Number(el.dataset.i)); break;
         case 'unlock': unlock(el.dataset.target); break;
-        case 'quickAdmin': quickAdmin(); break;
         case 'roleLogout': roleLogout(); break;
         case 'toggleStage': toggleStage(el.dataset.k); break;
         case 'rejectOpen': rejectOpen(); break;
@@ -1889,10 +2152,25 @@
         case 'importSnap': $('importSnapFile').click(); break;
         case 'cleanup': cleanupExpired(); break;
         case 'clearAll': clearAll(); break;
-        case 'resetDemo': resetDemo(); break;
         case 'syncTest': syncTest(); break;
         case 'syncPull': syncPull(); break;
         case 'syncPush': syncPush(); break;
+        case 'roomJoin': roomJoin(id || null); break;
+        case 'roomCreate': roomCreate('custom'); break;
+        case 'roomRandom': roomCreate('random'); break;
+        case 'roomRefresh': roomList(); break;
+        case 'roomLeave': roomLeave(); break;
+        case 'roomClose': roomClose(); break;
+        case 'roomSend': roomSend(); break;
+        case 'roomCopy': roomCopy(); break;
+        case 'roomDownload': roomDownload(el.dataset.key, el.dataset.name); break;
+        case 'fbSubmit': fbSubmit(); break;
+        case 'serviceUnlockOpen': serviceUnlockOpen(); break;
+        case 'svcUnlock': serviceUnlock(); break;
+        case 'svcBack': svcView('serviceUserView'); break;
+        case 'svcLogout': serviceLogout(); break;
+        case 'svcRefresh': feedbackLoad().then(renderService).catch(function (e) { toast(e.message); }); break;
+        case 'fbStatus': fbStatus(id, el.dataset.status); break;
       }
     } catch (err) { toast('操作失败：' + (err && err.message ? err.message : '未知错误')); }
   });
@@ -1917,6 +2195,7 @@
     else if (t.id === 'drawerAddFile') onDrawerFiles(t);
     else if (t.id === 'importJsonFile' && t.files && t.files[0]) { importJSON(t.files[0]); t.value = ''; }
     else if (t.id === 'importSnapFile' && t.files && t.files[0]) { importSnapshot(t.files[0]); t.value = ''; }
+    else if (t.id === 'roomFile' && t.files && t.files[0]) { roomSendFile(t.files[0]); t.value = ''; }
   });
   /* ---------- 输入法（IME）友好 ----------
    * 中文拼音组合期间不触发筛选/重绘、不响应 Esc，避免候选词被打断或弹窗被误关。
@@ -1946,6 +2225,7 @@
   });
   document.addEventListener('keydown', function (e) {
     if (inComposition(e)) return;   // 组合中按 Esc 是「取消候选词」，不关闭弹窗
+    if (e.key === 'Enter' && e.target && e.target.id === 'roomText') { e.preventDefault(); roomSend(); return; }
     if (e.key === 'Escape') { closeModal(); closeDrawer(); }
   });
 
@@ -1954,11 +2234,12 @@
     initFormSelects();
     applyTheme();
     loadDownloadDir();
-    var had = loadState();
-    var ready = had ? Promise.resolve() : (function () {
-      showProgress('正在准备演示数据…');
-      return seedDemo().then(hideProgress);
-    })();
+    loadState();
+    roomRestore();
+    /* 首次启动不再生成任何演示单据；历史遗留的演示记录会被一次性清理，
+     * 其墓碑随下一次同步推送，让其它设备上的演示记录也一并消失。 */
+    if (stripDemoData()) saveState();
+    var ready = Promise.resolve();
     ready.then(function () {
       resetForm();
       renderAll();

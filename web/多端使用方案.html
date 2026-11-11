@@ -98,7 +98,7 @@ th{background:var(--panel2);font-weight:600;color:var(--text2);white-space:nowra
     <a href="#s0">0 · 现状与目标</a><a href="#s1">1 · 能力矩阵</a><a href="#s2">2 · 分阶段路线</a>
     <a href="#s3">3 · L1 架构与接口</a><a href="#s4">4 · 云函数骨架</a><a href="#s5">5 · 跨端适配清单</a>
     <a href="#s6">6 · 合规与风险</a><a href="#s7">7 · 落地顺序</a><a href="#s8">8 · 工作量表</a>
-    <a href="#s9">9 · 本次新增能力</a>
+    <a href="#s9">9 · 本次新增能力</a><a href="#s10">10 · 协同与反馈</a>
   </nav>
 
   <section id="s0">
@@ -188,7 +188,7 @@ th{background:var(--panel2);font-weight:600;color:var(--text2);white-space:nowra
       <div class="lv">L3 · 可选<small>身份与权限统一</small></div>
       <div>
         <h3>把「口令」升级成「角色」</h3>
-        <p>网关校验口令后签发短期会话，网页端按<b>提交人 / 审核员 / 最高管理</b>三角色控制可见范围与写操作；所有审核、退回、公告发布写入 <code>audit_log</code> 集合。与小程序现有 <code>ADMIN_KEY='社畜'</code> / <code>AUDIT_KEY='天选打工人'</code> 模型对齐，密钥只在服务端校验，前端不硬编码。</p>
+        <p>网关校验口令后签发短期会话，网页端按<b>提交人 / 审核员 / 最高管理</b>三角色控制可见范围与写操作；所有审核、退回、公告发布写入 <code>audit_log</code> 集合。与小程序三角色模型对齐。当前网页版不展示任何密钥明文：管理 / 审核角色在本地比对 SHA-256 摘要以支持离线使用，客服角色由服务端校验摘要；正式生产建议改为服务端签发角色会话。</p>
       </div>
     </div>
   </section>
@@ -398,8 +398,20 @@ exports.main = async (event) =&gt; {
     </table></div>
   </section>
 
+  <section id="s10">
+    <h2><span class="no">10</span> 本次新增：演示数据清理、密钥隐藏、客服反馈与项目组会议</h2>
+    <div class="tw"><table>
+      <tr><th>能力</th><th>实现方式</th><th>约束</th></tr>
+      <tr><td>演示数据清理</td><td>移除首次启动的演示数据生成与「重置演示数据」入口；客户端按精确编号 / <code>demo://</code> 材料标记一次性过滤历史遗留记录并写入墓碑，服务端 <code>mergeState</code> 同步兜底过滤。</td><td>仅清理内置演示记录，真实单据不受影响；审核端与历史端不再出现演示提交 / 审核记录。</td></tr>
+      <tr><td>密钥不在网页展示</td><td>管理 / 审核密钥改为本地 SHA-256 摘要比对，页面与源码均无明文；客服密钥只存服务端摘要，前端仅临时保存输入，刷新需重新验证。</td><td>删除「一键体验最高管理」后门；密钥输入框默认遮蔽。前端摘要体系用于离线可用，正式生产应改为服务端签发角色。</td></tr>
+      <tr><td>客服反馈</td><td>新增 <code>/api/feedback</code>：用户提交反馈无需密钥，客服凭密钥调用 <code>action:list</code> 查看全部并可标记已处理；数据存 <code>data/feedbacks.json</code>。</td><td>需在线共享模式；离线打开时主体报销功能不受影响。</td></tr>
+      <tr><td>项目组会议</td><td>新增 <code>/api/room</code>：四位房间号唯一，<code>0000</code> 长期保留且不参与分配；发起人可自定义或随机抽取；关闭或 6 小时无活动自动回池。会议内文字与文件实时同步（2 秒轮询增量，文件本体复用 <code>/api/file</code>）。</td><td>单文件上限 8 MB；每房保留最近 200 条消息；仅发起人可关闭非常驻房间。</td></tr>
+      <tr><td>界面简化</td><td>导航改为直白短文案，工作台增加常用操作快捷条，高级设置折叠，技术性说明移出页脚。</td><td>所有原有 DOM id 与事件动作保持不变，主体功能不受影响。</td></tr>
+    </table></div>
+  </section>
+
   <div class="ft">
-    本方案对应网页版已实现：功能对齐小程序 8 页面 · 本地持久化 · 一键导出 ZIP · 完整快照跨设备搬运 · 云同步客户端 · PWA 离线<br>
+    本方案对应网页版已实现：报销审核全流程 · 一键导出 ZIP · 材料本体跨设备共享 · 客服反馈 · 项目组实时会议 · PWA 离线<br>
     小程序源码零改动，<code>web/</code> 已被打包忽略 · 最终部署与域名配置需在云开发控制台完成
   </div>
 </div>

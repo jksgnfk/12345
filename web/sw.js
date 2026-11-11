@@ -3,7 +3,7 @@
  * /api/ 共享数据接口完全不拦截（必须实时、绝不缓存）；云同步的跨域 POST 也不拦截；
  * file:// 协议下不会注册本脚本。
  */
-var CACHE = 'cy-web-v6';
+var CACHE = 'cy-web-v7';
 var ASSETS = [
   './', './index.html', './app.js', './zip.js',
   './manifest.webmanifest', './icon.svg',

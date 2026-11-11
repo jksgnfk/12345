@@ -258,6 +258,36 @@ textarea.fin{min-height:84px;resize:vertical}
   .tab{padding:9px 12px}
   .drawer{width:100%}
 }
+/* 常用操作 / 高级设置折叠 */
+.quickbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.quickbar .qb-label{font-size:13px;color:var(--text2);margin-right:4px}
+.advanced{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel2);padding:12px 16px}
+.advanced summary{cursor:pointer;font-size:14px;font-weight:600;color:var(--text2);padding:4px 0}
+.advanced[open] summary{margin-bottom:12px}
+/* 项目组会议 */
+.room-entry{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.room-entry .inp{width:220px}
+.room-no{font-variant-numeric:tabular-nums;letter-spacing:2px;color:var(--cyan)}
+.room-list{display:flex;gap:8px;flex-wrap:wrap}
+.room-pill{border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:13px;background:var(--panel2);color:var(--text);cursor:pointer}
+.room-pill:hover{border-color:var(--cyan)}
+.room-msgs{height:min(52vh,460px);overflow-y:auto;padding:14px 16px;background:var(--panel2)}
+.rmsg{margin-bottom:12px;display:flex;flex-direction:column;align-items:flex-start}
+.rmsg.me{align-items:flex-end}
+.rmsg .bubble{max-width:min(78%,560px);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px;word-break:break-word;white-space:pre-wrap;font-size:14px}
+.rmsg.me .bubble{background:var(--cyan-l);border-color:var(--cyan)}
+.rmsg .meta{font-size:11px;color:var(--text3);margin-top:4px}
+.rmsg .filelink{color:var(--cyan);cursor:pointer;text-decoration:underline}
+.room-compose{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--line)}
+.room-compose .inp{flex:1 1 220px}
+/* 客服反馈 */
+.fb-list{padding:14px 16px;display:grid;gap:10px}
+.fb-item{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel2)}
+.fb-item.done{opacity:.72}
+.fb-hd{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text3)}
+.fb-body{margin-top:6px;font-size:14px;white-space:pre-wrap;word-break:break-word}
+.fb-foot{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media(max-width:560px){.room-entry .inp{width:100%}.room-msgs{height:46vh}.quickbar .btn{flex:1 1 calc(50% - 8px)}}
 </style>
 </head>
 <body>
@@ -265,13 +295,12 @@ textarea.fin{min-height:84px;resize:vertical}
   <header class="hdr">
     <div class="brand">
       <div class="mark"></div>
-      <div><h1>宸阳书院报销系统</h1><p>网页版工作台 · 功能对齐小程序 · 数据本地持久化</p></div>
+      <div><h1>宸阳书院报销系统</h1><p>报销 · 审核 · 协同，打开链接即可多端共用</p></div>
     </div>
     <div class="hdr-actions">
       <span class="badge" id="roleBadge">游客</span>
       <button class="btn ghost sm" id="userBtn" data-act="loginOpen">身份登记</button>
       <button class="btn ghost sm" id="themeBtn" data-act="theme">切换深色</button>
-      <a class="btn ghost sm" href="./多端使用方案.html" target="_blank" rel="noopener">多端方案</a>
     </div>
   </header>
 
@@ -280,14 +309,23 @@ textarea.fin{min-height:84px;resize:vertical}
     <button class="tab" data-act="tab" data-tab="submit">提交报销</button>
     <button class="tab" data-act="tab" data-tab="track">我的进度</button>
     <button class="tab" data-act="tab" data-tab="history">全部历史</button>
-    <button class="tab" data-act="tab" data-tab="audit">审核端</button>
-    <button class="tab" data-act="tab" data-tab="announce">公告栏<span class="redot" id="annDot" hidden></span></button>
-    <button class="tab" data-act="tab" data-tab="data">数据管理</button>
+    <button class="tab" data-act="tab" data-tab="audit">审核</button>
+    <button class="tab" data-act="tab" data-tab="announce">公告<span class="redot" id="annDot" hidden></span></button>
+    <button class="tab" data-act="tab" data-tab="room">项目组</button>
+    <button class="tab" data-act="tab" data-tab="service">客服反馈</button>
+    <button class="tab" data-act="tab" data-tab="data">设置</button>
   </nav>
 
   <!-- 工作台 -->
   <section class="page" id="page-work">
     <section class="stats" id="workStats"></section>
+    <div class="quickbar">
+      <span class="qb-label">常用操作</span>
+      <button class="btn ghost sm" data-act="tab" data-tab="submit">新建报销</button>
+      <button class="btn ghost sm" data-act="tab" data-tab="track">查看进度</button>
+      <button class="btn ghost sm" data-act="tab" data-tab="room">项目会议</button>
+      <button class="btn ghost sm" data-act="tab" data-tab="service">意见反馈</button>
+    </div>
     <section class="panel">
       <div class="toolbar">
         <input class="inp" id="wSearch" placeholder="搜索事由 / 提交人 / 编号 / 部门">
@@ -358,14 +396,12 @@ textarea.fin{min-height:84px;resize:vertical}
   <section class="page" id="page-history" hidden>
     <section class="panel lock-panel" id="historyLock">
       <div class="lk-ic">🔒</div><h2>全部历史需最高管理权限</h2>
-      <p>与小程序一致：输入最高管理密钥后可查看全部单据与统计。</p>
+      <p>输入管理密钥后可查看全部单据与统计。</p>
       <div class="lock-row">
-        <input class="inp" id="histKey" type="text" autocomplete="off" inputmode="text" placeholder="输入管理密钥（支持中文输入法）">
-        <button class="btn ghost sm" data-act="toggleSecret" data-for="histKey">隐藏</button>
+        <input class="inp secret" id="histKey" type="text" autocomplete="off" inputmode="text" placeholder="输入管理密钥">
+        <button class="btn ghost sm" data-act="toggleSecret" data-for="histKey">显示</button>
         <button class="btn primary" data-act="unlock" data-target="history">解锁</button>
-        <button class="btn ghost" data-act="quickAdmin">一键体验最高管理</button>
       </div>
-      <p class="hint" style="margin-top:14px">测试密钥：<code>社畜</code>（最高管理） / <code>天选打工人</code>（审核员）</p>
     </section>
     <div id="historyBody" hidden>
       <section class="stats" id="histStats"></section>
@@ -388,14 +424,12 @@ textarea.fin{min-height:84px;resize:vertical}
   <section class="page" id="page-audit" hidden>
     <section class="panel lock-panel" id="auditLock">
       <div class="lk-ic">🛡️</div><h2>审核端需验证身份</h2>
-      <p>与小程序一致：审核员可推进流程与退回，最高管理额外拥有数据清理权限。</p>
+      <p>审核员可推进流程与退回，最高管理还可以删除项目。</p>
       <div class="lock-row">
-        <input class="inp" id="audKey" type="text" autocomplete="off" inputmode="text" placeholder="输入审核密钥（支持中文输入法）">
-        <button class="btn ghost sm" data-act="toggleSecret" data-for="audKey">隐藏</button>
+        <input class="inp secret" id="audKey" type="text" autocomplete="off" inputmode="text" placeholder="输入审核密钥">
+        <button class="btn ghost sm" data-act="toggleSecret" data-for="audKey">显示</button>
         <button class="btn primary" data-act="unlock" data-target="audit">解锁</button>
-        <button class="btn ghost" data-act="quickAdmin">一键体验最高管理</button>
       </div>
-      <p class="hint" style="margin-top:14px">测试密钥：<code>社畜</code>（最高管理） / <code>天选打工人</code>（审核员）</p>
     </section>
     <div id="auditBody" hidden>
       <section class="stats" id="aStats"></section>
@@ -413,7 +447,7 @@ textarea.fin{min-height:84px;resize:vertical}
       </section>
       <section class="panel panel-pad">
         <h2>审核操作说明</h2>
-        <p class="hint">点击任意单据打开详情：在底部审核区可<b>点击阶段节点</b>推进或回退流程、填写<b>必填的退回原因</b>后退回、删除单据，以及<b>一键导出</b>该单全部材料。所有操作立即写入浏览器本地存储。</p>
+        <p class="hint">点击任意单据打开详情：可推进或回退流程、填写原因后退回、一键导出该单全部材料。删除项目仅最高管理可用。</p>
       </section>
     </div>
   </section>
@@ -432,12 +466,100 @@ textarea.fin{min-height:84px;resize:vertical}
     </section>
   </section>
 
-  <!-- 数据管理 -->
+  <!-- 项目组 -->
+  <section class="page" id="page-room" hidden>
+    <div id="roomLobby">
+      <section class="panel panel-pad">
+        <h2>加入会议</h2>
+        <p class="sub">输入 4 位房间号即可加入，会议中的文字与文件会实时同步给所有成员。0000 为长期房间，随时可用。</p>
+        <div class="room-entry">
+          <input class="inp" id="roomJoinNo" inputmode="numeric" maxlength="4" placeholder="4 位房间号">
+          <button class="btn primary" data-act="roomJoin">加入会议</button>
+        </div>
+      </section>
+      <section class="panel panel-pad">
+        <h2>发起会议</h2>
+        <p class="sub">可以自己指定一个未被占用的 4 位号码，也可以让系统从剩余号码中抽取；关闭会议后号码自动回收。</p>
+        <div class="room-entry">
+          <input class="inp" id="roomCreateNo" inputmode="numeric" maxlength="4" placeholder="自定义 4 位号码（随机抽取可留空）">
+          <button class="btn ghost" data-act="roomCreate">用此号码发起</button>
+          <button class="btn primary" data-act="roomRandom">随机抽取号码</button>
+        </div>
+        <div class="hint" id="roomFreeHint" style="margin-top:10px">—</div>
+      </section>
+      <section class="panel panel-pad">
+        <h2>进行中的会议</h2>
+        <p class="sub">点击房间号可直接加入。</p>
+        <div id="roomActiveList" class="room-list"><div class="hint">正在获取…</div></div>
+        <button class="btn ghost sm" data-act="roomRefresh" style="margin-top:10px">刷新列表</button>
+      </section>
+    </div>
+    <div id="roomMeeting" hidden>
+      <section class="panel">
+        <div class="toolbar">
+          <div><h2 style="font-size:16px;margin:0">房间 <span id="roomMeetingNo" class="room-no">0000</span></h2>
+            <div class="t-sub" id="roomMeetingSub">—</div></div>
+          <div class="spacer"></div>
+          <button class="btn ghost sm" data-act="roomCopy">复制房间号</button>
+          <button class="btn ghost sm" data-act="roomLeave">离开</button>
+          <button class="btn danger sm" id="roomCloseBtn" data-act="roomClose">关闭会议</button>
+        </div>
+        <div class="room-msgs" id="roomMsgs"></div>
+        <div class="room-compose">
+          <input class="inp" id="roomText" maxlength="2000" placeholder="输入消息，回车即可发送">
+          <button class="btn primary" data-act="roomSend">发送</button>
+          <label class="btn ghost file-btn">发送文件<input type="file" id="roomFile" hidden></label>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- 客服反馈 -->
+  <section class="page" id="page-service" hidden>
+    <div id="serviceUserView">
+      <section class="panel panel-pad">
+        <h2>意见反馈</h2>
+        <p class="sub">使用中遇到问题或有建议，写下来提交即可，客服会在后台查看。</p>
+        <div class="frow"><label>反馈内容</label><textarea class="fin" id="fbText" maxlength="1000" placeholder="请描述遇到的问题或建议…"></textarea></div>
+        <div class="frow"><label>联系方式</label><input class="fin" id="fbContact" maxlength="80" placeholder="选填，便于回复（如邮箱 / 微信）"></div>
+        <div class="form-actions" style="padding-left:0;padding-right:0">
+          <button class="btn primary" data-act="fbSubmit">提交反馈</button>
+          <button class="btn ghost" data-act="serviceUnlockOpen">客服入口</button>
+        </div>
+        <div class="hint" id="fbMine"></div>
+      </section>
+    </div>
+    <div id="serviceUnlockView" hidden>
+      <section class="panel lock-panel">
+        <div class="lk-ic">🎧</div><h2>客服验证</h2>
+        <p>输入客服密钥后可查看全部用户反馈。</p>
+        <div class="lock-row">
+          <input class="inp secret" id="svcKey" type="text" autocomplete="off" inputmode="text" placeholder="输入客服密钥">
+          <button class="btn ghost sm" data-act="toggleSecret" data-for="svcKey">显示</button>
+          <button class="btn primary" data-act="svcUnlock">进入客服端</button>
+          <button class="btn ghost" data-act="svcBack">返回</button>
+        </div>
+      </section>
+    </div>
+    <div id="serviceAdminView" hidden>
+      <section class="panel">
+        <div class="toolbar">
+          <div><h2 style="font-size:16px;margin:0">客服工作台</h2><div class="t-sub" id="svcCount">—</div></div>
+          <div class="spacer"></div>
+          <button class="btn ghost sm" data-act="svcRefresh">刷新</button>
+          <button class="btn ghost sm" data-act="svcLogout">退出客服</button>
+        </div>
+        <div id="fbList" class="fb-list"></div>
+      </section>
+    </div>
+  </section>
+
+  <!-- 设置 -->
   <section class="page" id="page-data" hidden>
     <div class="grid-cards">
       <section class="dcard">
         <h3>备份与恢复（JSON）</h3>
-        <p>导出记录与公告的元数据（不含文件本体），可用于小程序 <code>store.importJSON</code> 或另一台设备恢复。</p>
+        <p>导出单据与公告，可在另一台设备恢复。</p>
         <div class="row">
           <button class="btn ghost sm" data-act="exportJSON">导出 JSON</button>
           <button class="btn ghost sm" data-act="importJSON">导入 JSON</button>
@@ -446,7 +568,7 @@ textarea.fin{min-height:84px;resize:vertical}
       </section>
       <section class="dcard">
         <h3>跨设备完整快照（ZIP）</h3>
-        <p>包含 <code>records.json</code>、公告与<b>全部材料文件本体</b>。在手机 / 平板 / 电脑之间搬运数据，导入后即可继续操作与导出。</p>
+        <p>包含全部材料文件本体，换设备时导入即可继续操作与导出。</p>
         <div class="row">
           <button class="btn primary sm" data-act="exportSnap">导出完整快照</button>
           <button class="btn ghost sm" data-act="importSnap">导入完整快照</button>
@@ -454,60 +576,66 @@ textarea.fin{min-height:84px;resize:vertical}
         </div>
       </section>
       <section class="dcard">
-        <h3>存储清理</h3>
-        <p>与小程序一致：清理「已完成且 30 天未变动」的记录及其材料；也可清空全部或重置为演示数据。</p>
-        <div class="row">
-          <button class="btn amber sm" data-act="cleanup">清理过期记录</button>
-          <button class="btn ghost sm" data-act="resetDemo">重置演示数据</button>
-          <button class="btn danger sm" data-act="clearAll">清空全部</button>
-        </div>
-      </section>
-      <section class="dcard">
-        <h3>云同步（可选 · 多端同源）</h3>
-        <p>填入 HTTP 云函数网关地址与访问口令后，可上传 / 拉取同一份数据。未配置时纯本地运行，功能不受影响。</p>
-        <input class="inp" id="syncUrl" placeholder="https://your-gateway.example.com">
-        <input class="inp" id="syncToken" type="text" autocomplete="off" inputmode="text" placeholder="访问口令（保存在本地）">
-        <div class="row" style="margin:-4px 0 8px"><button class="btn ghost sm" data-act="toggleSecret" data-for="syncToken">隐藏</button></div>
-        <div class="row">
-          <button class="btn ghost sm" data-act="syncTest">测试连接</button>
-          <button class="btn ghost sm" data-act="syncPull">拉取云端</button>
-          <button class="btn primary sm" data-act="syncPush">上传本地</button>
-        </div>
-        <div class="sync-status" id="syncStatus">在线部署时自动启用多端共享；否则为纯本地模式（可在下方另行配置网关）。</div>
-      </section>
-      <section class="dcard">
-        <h3>下载位置（默认桌面）</h3>
-        <p>导出 ZIP、JSON 备份、完整快照及材料原文件时，优先直接保存到桌面。浏览器要求首次授权一次目录（默认定位桌面），之后长期生效；不支持该能力的浏览器仍走浏览器默认下载。</p>
+        <h3>下载位置</h3>
+        <p>导出文件优先直接保存到桌面，首次需授权一次目录。</p>
         <div class="dl-status" id="dlDirStatus">正在检测下载位置…</div>
         <div class="row">
           <button class="btn primary sm" data-act="pickDesktop">设为桌面…</button>
           <button class="btn ghost sm" data-act="resetDownload">恢复浏览器默认</button>
         </div>
       </section>
-      <section class="dcard" style="grid-column:1/-1">
-        <h3>项目管理 · 最高权限删除</h3>
-        <p>仅「最高管理」可删除项目（单据）及其全部材料；删除会生成墓碑，其它设备打开同一链接时也会移除。审核员仍可退回、推进流程与导出，不能删除项目。</p>
-        <div class="row" id="adminUnlockRow">
-          <input class="inp" id="dataAdminKey" type="text" autocomplete="off" inputmode="text" placeholder="输入最高管理密钥以解锁删除权限" style="flex:1;min-width:220px;width:auto;margin-bottom:0">
-          <button class="btn ghost sm" data-act="toggleSecret" data-for="dataAdminKey">隐藏</button>
-          <button class="btn primary sm" data-act="unlockDataAdmin">解锁最高管理</button>
-          <button class="btn ghost sm" data-act="dataRoleLogout">退出角色</button>
-        </div>
-        <div class="sync-status" id="dataAdminStatus">—</div>
-        <div id="adminRecList" class="admin-rec-list"></div>
-        <div class="row" id="adminRecOps" hidden style="margin-top:10px">
-          <button class="btn danger sm" data-act="deleteAdminSelected">删除选中项目</button>
-        </div>
+      <section class="dcard">
+        <h3>存储状态</h3>
+        <p>查看当前设备保存的单据、公告与材料数量。</p>
+        <p class="hint" id="storeInfo">—</p>
       </section>
     </div>
-    <section class="panel panel-pad" style="margin-top:14px">
-      <h2>本地存储状态</h2><p class="hint" id="storeInfo">—</p>
-    </section>
+    <details class="advanced">
+      <summary>高级设置 · 清理、同步与权限</summary>
+      <div class="grid-cards">
+        <section class="dcard">
+          <h3>存储清理</h3>
+          <p>清理「已完成且 30 天未变动」的记录及其材料，或清空全部数据。</p>
+          <div class="row">
+            <button class="btn amber sm" data-act="cleanup">清理过期记录</button>
+            <button class="btn danger sm" data-act="clearAll">清空全部</button>
+          </div>
+        </section>
+        <section class="dcard">
+          <h3>云同步（可选）</h3>
+          <p>填入网关地址与口令后可主动上传 / 拉取；不配置不影响在线共享。</p>
+          <input class="inp" id="syncUrl" placeholder="https://your-gateway.example.com">
+          <input class="inp" id="syncToken" type="text" autocomplete="off" inputmode="text" placeholder="访问口令（保存在本地）">
+          <div class="row" style="margin:-4px 0 8px"><button class="btn ghost sm" data-act="toggleSecret" data-for="syncToken">隐藏</button></div>
+          <div class="row">
+            <button class="btn ghost sm" data-act="syncTest">测试连接</button>
+            <button class="btn ghost sm" data-act="syncPull">拉取云端</button>
+            <button class="btn primary sm" data-act="syncPush">上传本地</button>
+          </div>
+          <div class="sync-status" id="syncStatus">在线部署时自动启用多端共享。</div>
+        </section>
+        <section class="dcard" style="grid-column:1/-1">
+          <h3>项目管理 · 最高权限删除</h3>
+          <p>仅最高管理可删除项目及其全部材料；删除会同步到其它设备，操作前二次确认。</p>
+          <div class="row" id="adminUnlockRow">
+            <input class="inp secret" id="dataAdminKey" type="text" autocomplete="off" inputmode="text" placeholder="输入最高管理密钥以解锁删除权限" style="flex:1;min-width:220px;width:auto;margin-bottom:0">
+            <button class="btn ghost sm" data-act="toggleSecret" data-for="dataAdminKey">显示</button>
+            <button class="btn primary sm" data-act="unlockDataAdmin">解锁最高管理</button>
+            <button class="btn ghost sm" data-act="dataRoleLogout">退出角色</button>
+          </div>
+          <div class="sync-status" id="dataAdminStatus">—</div>
+          <div id="adminRecList" class="admin-rec-list"></div>
+          <div class="row" id="adminRecOps" hidden style="margin-top:10px">
+            <button class="btn danger sm" data-act="deleteAdminSelected">删除选中项目</button>
+          </div>
+        </section>
+      </div>
+    </details>
   </section>
 
   <footer class="ft">
-    网页版 · 字段与流程口径对齐小程序 store.js（STAGES / MATNAME / TYPE_MATERIALS / MAX_FILES=50 / 30 天清理）<br>
-    本地双击打开时数据仅存本浏览器；在线共享模式下，单据、公告与材料原始文件会同步到本站服务端供多端使用。ZIP 打包与解包为纯前端零依赖实现（STORE + UTF-8 中文名）。
+    网页版 · 报销、审核与项目协同一体化 · <a href="./多端使用方案.html" target="_blank" rel="noopener">多端使用说明</a><br>
+    在线链接下数据自动多端同步；本地打开时数据仅保存在当前浏览器。
   </footer>
 </div>
 
