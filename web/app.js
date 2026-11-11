@@ -153,7 +153,7 @@
    * 弹出目录选择（startIn:'desktop' 默认定位桌面），授权后把句柄存入 IndexedDB，
    * 之后所有导出 / 下载直接写入该文件夹；不支持或拒绝授权时降级为浏览器默认下载。 */
   var DIR_PREF_DB = 'cy_web_prefs', DIR_PREF_KEY = 'downloadDir';
-  var dirHandle = null, dirPromise = null, dirDeclined = false, _prefDB = null;
+  var dirHandle = null, dirPromise = null, dirDeclinedAt = 0, _prefDB = null;
   function fsDirSupported() {
     return typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function'
       && (window.isSecureContext || /^https:$/.test(location.protocol));
@@ -208,14 +208,15 @@
     }).catch(function () { return false; });
   }
   function renderDownloadStatus() {
-    var box = $('dlDirStatus'); if (!box) return;
-    if (!fsDirSupported()) {
-      box.textContent = '当前浏览器不支持指定下载目录：导出仍使用浏览器默认下载位置。可在浏览器「设置 → 下载内容 → 位置」中改为桌面。';
-      return;
-    }
-    box.textContent = dirHandle
-      ? '已设为「' + (dirHandle.name || '自定义目录') + '」：所有导出与下载将直接保存到该文件夹（已授权，长期生效）。'
-      : '尚未授权目录：首次导出时会弹出文件夹选择（默认定位到桌面），选择一次后所有下载都直接保存到桌面。';
+    var box = $('dlDirStatus'), quick = $('dlQuickStatus'), btn = $('dlQuickBtn');
+    var ok = !!dirHandle;
+    var msg = !fsDirSupported()
+      ? '当前浏览器不支持指定目录：请在浏览器「设置 → 下载内容 → 位置」把下载目录改成桌面。'
+      : (ok ? '已设为「' + (dirHandle.name || '自定义目录') + '」：所有导出与下载直接保存到该文件夹。'
+            : '尚未设为桌面：首次导出时会弹出文件夹选择（默认定位桌面），授权一次后长期生效。');
+    if (box) { box.textContent = msg; box.classList.toggle('dl-warn', !ok); }
+    if (quick) quick.textContent = ok ? '下载位置：' + (dirHandle.name || '自定义目录') : '下载位置：浏览器默认';
+    if (btn) btn.textContent = ok ? '更改下载目录' : '设为桌面';
   }
   function loadDownloadDir() {
     if (!fsDirSupported()) { renderDownloadStatus(); return Promise.resolve(); }
@@ -241,7 +242,7 @@
     return Promise.resolve(p).then(function (h) {
       return dirPermission(h, true).then(function (ok) {
         if (!ok) { if (!silent) toast('未获得目录写入权限'); return null; }
-        dirHandle = h; dirDeclined = false;
+        dirHandle = h; dirDeclinedAt = 0;
         return setPref(DIR_PREF_KEY, h).then(function () {
           renderDownloadStatus();
           if (!silent) toast('已设为「' + (h.name || '自定义目录') + '」，之后下载直接保存到该文件夹');
@@ -249,13 +250,19 @@
         });
       });
     }).catch(function () {
+      dirDeclinedAt = Date.now();   // 60 秒内不重复弹窗，超时后仍会自动再试
       if (!silent) toast('已取消，仍使用浏览器默认下载位置');
       return null;
     });
   }
   /* 必须在用户点击「导出 / 下载」的手势内调用；download() 会等这个 Promise 完成再写文件 */
   function prepareDownloadDir() {
-    if (dirDeclined || dirPromise || !fsDirSupported()) return;
+    if (!fsDirSupported()) return;
+    if (dirDeclinedAt) {
+      if (Date.now() - dirDeclinedAt < 60000) return;
+      dirDeclinedAt = 0;
+    }
+    if (dirPromise) return;
     if (dirHandle) {
       dirPromise = dirPermission(dirHandle, true).then(function (ok) {
         if (!ok) { dirHandle = null; renderDownloadStatus(); return null; }
@@ -264,7 +271,6 @@
       return;
     }
     dirPromise = pickDesktopDir(true).then(function (h) {
-      if (!h) dirDeclined = true;   // 本会话不再重复弹窗
       return h;
     });
   }
@@ -293,10 +299,11 @@
     }).then(function (done) {
       if (done) { toast('已保存到' + (dirHandle && dirHandle.name ? '「' + dirHandle.name + '」' : '桌面') + '：' + name); return; }
       fallbackDownload(bytes, name, mime);
+      toast('本次保存到浏览器默认位置；点「设置 → 下载位置」可固定为桌面');
     }).catch(function () { fallbackDownload(bytes, name, mime); });
   }
   function resetDownloadDir() {
-    dirHandle = null; dirPromise = null; dirDeclined = true;
+    dirHandle = null; dirPromise = null; dirDeclinedAt = Date.now();
     setPref(DIR_PREF_KEY, null);
     renderDownloadStatus(); toast('已恢复为浏览器默认下载位置');
   }
@@ -410,7 +417,7 @@
   }
 
   /* ---------- 状态与持久化 ---------- */
-  var state = { records: [], announcements: [], tombs: {}, user: null, role: null, lastRead: 0, sync: { url: '', token: '' } };
+  var state = { records: [], announcements: [], tombs: {}, user: null, role: null, lastRead: 0 };
   var selected = new Set(), currentId = null, currentTab = 'work', formFiles = {};
   var pgDone = 0, pgTotal = 1, _modalYes = null;
   var _lastIds = { records: null, announcements: null };
@@ -443,8 +450,7 @@
         records: state.records.map(cleanRec),
         announcements: state.announcements,
         tombs: state.tombs,
-        user: state.user, role: state.role, lastRead: state.lastRead,
-        sync: state.sync
+        user: state.user, role: state.role, lastRead: state.lastRead
       }));
     } catch (e) { toast('本地存储写入失败：' + (e && e.message ? e.message : '容量不足')); }
     scheduleOnlinePush();
@@ -461,7 +467,6 @@
       state.user = s.user || null;
       state.role = s.role || null;
       state.lastRead = Number(s.lastRead) || 0;
-      state.sync = s.sync || { url: '', token: '' };
       return true;
     } catch (e) { return false; }
   }
@@ -740,8 +745,6 @@
     if (btn) btn.textContent = admin ? '发布公告' : '发布公告（需最高管理）';
   }
   function renderData() {
-    if (!$('syncUrl').value) $('syncUrl').value = state.sync.url || '';
-    if (!$('syncToken').value) $('syncToken').value = state.sync.token || '';
     var files = 0, size = 0;
     state.records.forEach(function (r) {
       Object.keys(r.materials || {}).forEach(function (k) {
@@ -1835,112 +1838,6 @@
     });
   }
 
-  /* ---------- 云同步（可选，对应多端方案 L1 的网关契约） ---------- */
-  function syncCfg() {
-    state.sync.url = ($('syncUrl').value || '').trim();
-    state.sync.token = ($('syncToken').value || '').trim();
-    saveState();
-    return state.sync;
-  }
-  function syncStatus(t) { $('syncStatus').textContent = t; }
-  function syncCall(path, extra) {
-    var c = syncCfg();
-    if (!c.url) return Promise.reject(new Error('请先填写网关地址'));
-    var base = c.url.replace(/\/+$/, '');
-    var action = String(path).split('/').filter(Boolean).pop() || '';
-    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 20000) : null;
-    var done = function (v) { if (timer) clearTimeout(timer); return v; };
-    return fetch(base + path, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ token: c.token, action: action }, extra || {})),
-      signal: ctrl ? ctrl.signal : undefined
-    }).then(function (res) {
-      return res.text().then(function (txt) {
-        var j = {};
-        try { j = JSON.parse(txt || '{}'); } catch (e) { j = {}; }
-        if (j && typeof j.body === 'string' && j.statusCode) {
-          try { j = JSON.parse(j.body); } catch (e2) { }
-        }
-        if (!res.ok) return Promise.reject(new Error((j && j.msg) || ('HTTP ' + res.status)));
-        return j;
-      });
-    }).then(function (j) {
-      if (j && j.ok === false) return Promise.reject(new Error(j.msg || '云端拒绝请求'));
-      return done(j);
-    }, function (err) {
-      done(null);
-      var msg = (err && err.name === 'AbortError') ? '连接超时（20 秒）' : ((err && err.message) || String(err));
-      throw new Error(msg);
-    });
-  }
-  /* 尽力把云端材料下载到本机文件仓库；单个失败不影响整体 */
-  function pullMaterials(urls) {
-    var jobs = [], ok = 0;
-    state.records.forEach(function (r) {
-      Object.keys(r.materials || {}).forEach(function (k) {
-        (r.materials[k] || []).forEach(function (f) {
-          if (!f.fileID || !urls[f.fileID] || f.key) return;
-          jobs.push({ f: f, url: urls[f.fileID] });
-        });
-      });
-    });
-    var i = 0;
-    function next() {
-      if (i >= jobs.length) return Promise.resolve(ok);
-      var batch = jobs.slice(i, i + 4); i += 4;
-      return Promise.all(batch.map(function (it) {
-        return fetch(it.url).then(function (res) {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.arrayBuffer();
-        }).then(function (buf) {
-          var key = 'cloud_' + encodeURIComponent(it.f.fileID).replace(/%/g, '');
-          return putFile(key, new Uint8Array(buf)).then(function () {
-            it.f.key = key; it.f.size = buf.byteLength || it.f.size; ok++;
-          });
-        }).catch(function () { });
-      })).then(next);
-    }
-    return next().then(function (n) { return { ok: n, total: jobs.length }; });
-  }
-  function syncTest() {
-    syncStatus('正在连接…');
-    syncCall('/sync/ping').then(function (j) {
-      syncStatus('连接成功 ✓ 网关可用' + (j.env ? '（' + j.env + '）' : '') + '（' + new Date().toLocaleTimeString('zh-CN') + '）');
-    }).catch(function (e) {
-      syncStatus('连接失败：' + e.message + '。纯本地模式仍可正常使用，详见《多端使用方案》。');
-    });
-  }
-  function syncPull() {
-    syncStatus('正在拉取…');
-    syncCall('/sync/pull').then(function (j) {
-      var recs = Array.isArray(j.records) ? j.records : [];
-      var urls = j.fileUrls || {};
-      confirmDialog('拉取云端数据', '云端返回 ' + recs.length + ' 条单据，将覆盖本机当前数据。', function () {
-        state.records = recs.map(normalizeRecord).filter(Boolean);
-        state.announcements = Array.isArray(j.announcements) ? j.announcements : state.announcements;
-        selected.clear(); saveState(); renderAll();
-        toast('云端数据已拉取');
-        var n = Object.keys(urls).length;
-        syncStatus('已拉取 ' + state.records.length + ' 条单据' + (n ? '，正在下载 ' + n + ' 份材料…' : ''));
-        if (!n) return;
-        pullMaterials(urls).then(function (r) {
-          saveState(); renderAll();
-          syncStatus('同步完成：' + state.records.length + ' 条单据，材料 ' + r.ok + '/' + r.total + ' 份（失败可用快照补齐）');
-        });
-      });
-    }).catch(function (e) { syncStatus('拉取失败：' + e.message); });
-  }
-  function syncPush() {
-    syncStatus('正在上传…');
-    syncCall('/sync/push', {
-      records: state.records.map(cleanRec), announcements: state.announcements
-    }).then(function (j) {
-      syncStatus('上传完成 ✓ 写入 ' + (j.written || 0) + ' 条，跳过 ' + (j.skipped || 0) + ' 条（云端较新）');
-      toast('本地数据已上传云端');
-    }).catch(function (e) { syncStatus('上传失败：' + e.message); });
-  }
-
   /* ---------- 在线共享（本站 /api/state，自动多端同步） ----------
    * 探测到后端才启用；file:// 或纯静态托管自动降级为纯本地，原功能不受影响。
    * 服务端为唯一数据源：写操作后防抖推送，6 秒轮询 rev；服务端按 id + updatedAt
@@ -2139,7 +2036,7 @@
         case 'dataRoleLogout': dataRoleLogout(); break;
         case 'deleteAdminRec': deleteAdminRec(id); break;
         case 'deleteAdminSelected': deleteAdminSelected(); break;
-        case 'pickDesktop': dirPromise = null; dirDeclined = false; pickDesktopDir(false); break;
+        case 'pickDesktop': dirPromise = null; dirDeclinedAt = 0; pickDesktopDir(false); break;
         case 'resetDownload': resetDownloadDir(); break;
         case 'annAdd': annEditor(''); break;
         case 'annEdit': annEditor(id); break;
@@ -2152,9 +2049,6 @@
         case 'importSnap': $('importSnapFile').click(); break;
         case 'cleanup': cleanupExpired(); break;
         case 'clearAll': clearAll(); break;
-        case 'syncTest': syncTest(); break;
-        case 'syncPull': syncPull(); break;
-        case 'syncPush': syncPush(); break;
         case 'roomJoin': roomJoin(id || null); break;
         case 'roomCreate': roomCreate('custom'); break;
         case 'roomRandom': roomCreate('random'); break;

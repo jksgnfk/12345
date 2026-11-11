@@ -288,6 +288,8 @@ textarea.fin{min-height:84px;resize:vertical}
 .fb-body{margin-top:6px;font-size:14px;white-space:pre-wrap;word-break:break-word}
 .fb-foot{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 @media(max-width:560px){.room-entry .inp{width:100%}.room-msgs{height:46vh}.quickbar .btn{flex:1 1 calc(50% - 8px)}}
+.dl-warn{color:var(--amber)}
+.quickbar .qb-state{font-size:12px;color:var(--text3);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -325,6 +327,9 @@ textarea.fin{min-height:84px;resize:vertical}
       <button class="btn ghost sm" data-act="tab" data-tab="track">查看进度</button>
       <button class="btn ghost sm" data-act="tab" data-tab="room">项目会议</button>
       <button class="btn ghost sm" data-act="tab" data-tab="service">意见反馈</button>
+      <span style="flex:1"></span>
+      <span class="qb-state" id="dlQuickStatus">下载位置：检测中…</span>
+      <button class="btn ghost sm" id="dlQuickBtn" data-act="pickDesktop">设为桌面</button>
     </div>
     <section class="panel">
       <div class="toolbar">
@@ -602,16 +607,8 @@ textarea.fin{min-height:84px;resize:vertical}
           </div>
         </section>
         <section class="dcard">
-          <h3>云同步（可选）</h3>
-          <p>填入网关地址与口令后可主动上传 / 拉取；不配置不影响在线共享。</p>
-          <input class="inp" id="syncUrl" placeholder="https://your-gateway.example.com">
-          <input class="inp" id="syncToken" type="text" autocomplete="off" inputmode="text" placeholder="访问口令（保存在本地）">
-          <div class="row" style="margin:-4px 0 8px"><button class="btn ghost sm" data-act="toggleSecret" data-for="syncToken">隐藏</button></div>
-          <div class="row">
-            <button class="btn ghost sm" data-act="syncTest">测试连接</button>
-            <button class="btn ghost sm" data-act="syncPull">拉取云端</button>
-            <button class="btn primary sm" data-act="syncPush">上传本地</button>
-          </div>
+          <h3>在线共享</h3>
+          <p>打开同一在线链接即可多端自动同步单据、公告与材料，无需额外配置。</p>
           <div class="sync-status" id="syncStatus">在线部署时自动启用多端共享。</div>
         </section>
         <section class="dcard" style="grid-column:1/-1">
